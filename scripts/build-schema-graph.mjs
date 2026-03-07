@@ -28,8 +28,20 @@ function loadEnvFile(filePath) {
 loadEnvFile(path.join(root, ".env.local"));
 loadEnvFile(path.join(root, ".env"));
 
-const schemaPath = path.resolve(root, process.env.FAUNA_SCHEMA_PATH || process.argv[2] || "schema/main.fsl");
+const schemaPathRaw = process.env.FAUNA_SCHEMA_PATH || process.argv[2] || "schema/main.fsl";
+const schemaPath = path.isAbsolute(schemaPathRaw)
+  ? path.normalize(schemaPathRaw)
+  : path.resolve(root, schemaPathRaw);
 const outPath = path.resolve(root, "utils/schema-graph-data.ts");
+
+if (!fs.existsSync(schemaPath)) {
+  console.error("Error: Schema file not found.");
+  console.error("  Tried: " + schemaPath);
+  console.error("  Set FAUNA_SCHEMA_PATH in .env (absolute or relative to project root), e.g.:");
+  console.error("  FAUNA_SCHEMA_PATH=/path/to/other-repo/schema/main.fsl");
+  console.error("  Or run: node scripts/build-schema-graph.mjs /path/to/schema/main.fsl");
+  process.exit(1);
+}
 
 const content = fs.readFileSync(schemaPath, "utf-8");
 

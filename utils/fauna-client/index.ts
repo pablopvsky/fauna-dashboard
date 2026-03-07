@@ -11,6 +11,5 @@ export const severClient = new Client({
   endpoint: new URL(process.env.FAUNA_ENDPOINT ?? "http://localhost:8443"),
 });
 
-export * from "./agents";
 export * from "./collections";
-export * from "./tasks";
+
