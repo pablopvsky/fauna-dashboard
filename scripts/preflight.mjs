@@ -3,8 +3,7 @@
  * Preflight Check Script
  *
  * Validates the development environment before starting the application:
- * - fauna.config.yaml is set (copy from fauna.config.example.yaml)
- * - utils/schema-graph-data.ts is generated (run pnpm build:schema-graph)
+ * - utils/schema-graph-data.ts is generated (run pnpm build:schema-graph; uses FAUNA_SCHEMA_PATH from .env)
  *
  * Usage: node scripts/preflight.mjs
  * Exit: 0 if all checks pass, 1 otherwise.
@@ -67,26 +66,6 @@ function printResult(name, result) {
 }
 
 /**
- * Check that fauna.config.yaml exists and is set
- * @returns {CheckResult}
- */
-function checkFaunaConfig() {
-  const faunaConfigPath = resolve(root, "fauna.config.yaml");
-  if (!existsSync(faunaConfigPath)) {
-    return {
-      success: false,
-      message: "fauna.config.yaml is not set",
-      details: "Copy fauna.config.example.yaml to fauna.config.yaml and set database/secret",
-    };
-  }
-  return {
-    success: true,
-    message: "fauna.config.yaml is configured",
-    details: "Config file found at project root",
-  };
-}
-
-/**
  * Check that utils/schema-graph-data.ts has been generated
  * @returns {CheckResult}
  */
@@ -115,10 +94,6 @@ function runPreflightChecks() {
   console.log(`${colors.cyan}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`);
 
   const results = [];
-
-  const faunaResult = checkFaunaConfig();
-  printResult("Fauna Config", faunaResult);
-  results.push(faunaResult);
 
   const schemaResult = checkSchemaGraphData();
   printResult("Schema Graph Data", schemaResult);

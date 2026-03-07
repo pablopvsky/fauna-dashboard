@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { RequireAuth } from "@/components/RequireAuth";
 import { dashboardFetch } from "@/utils/dashboard-api";
 
 export default function CollectionsListPage() {
@@ -32,8 +33,32 @@ export default function CollectionsListPage() {
   }, []);
 
   return (
-    <main className="p-4">
-     
-    </main>
+    <RequireAuth>
+      <main className="p-4">
+        <h1 className="h2 text-gray-12 mb-4">Collections</h1>
+        {loading && <p className="text-gray-11">Loading…</p>}
+        {error && (
+          <p className="text-red-11 text-sm">{error}</p>
+        )}
+        {!loading && !error && (
+          <ul className="list-none space-y-1">
+            {names.length === 0 ? (
+              <li className="text-gray-11">No collections found.</li>
+            ) : (
+              names.map((name) => (
+                <li key={name}>
+                  <Link
+                    href={`/collections/${encodeURIComponent(name)}`}
+                    className="text-accent-11 hover:underline font-medium"
+                  >
+                    {name}
+                  </Link>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </main>
+    </RequireAuth>
   );
 }

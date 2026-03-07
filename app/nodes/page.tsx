@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { RequireAuth } from "@/components/RequireAuth";
 import { SchemaGraph } from "@/components/SchemaGraph";
 import {
   Drawer,
@@ -28,7 +29,8 @@ export default function NodesPage() {
   };
 
   return (
-    <main>
+    <RequireAuth>
+      <main>
       <SchemaGraph
         selectedNodeId={selectedNodeId}
         onNodeSelect={setSelectedNodeId}
@@ -67,5 +69,6 @@ export default function NodesPage() {
         </DrawerContent>
       </Drawer>
     </main>
+    </RequireAuth>
   );
 }
