@@ -26,12 +26,20 @@ function isFaunaNotFound(doc: unknown): boolean {
   return typeof o.cause === "string" && o.cause.toLowerCase().includes("not found");
 }
 
+const NO_CONNECTION_MESSAGE = "No connection. Set and activate a connection on Home.";
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ name: string }> },
 ) {
   try {
     const client = getClient(request);
+    if (!client) {
+      return NextResponse.json(
+        { success: false, error: NO_CONNECTION_MESSAGE },
+        { status: 401 }
+      );
+    }
     const { name } = await params;
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));

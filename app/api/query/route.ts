@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { fql } from "fauna";
 import type { Client } from "fauna";
-import { getClient } from "@/utils/fauna-client";
+import { getClient, getConnectionFromRequest } from "@/utils/fauna-client";
 
 /** Collection name: letters, numbers, underscore (matches FSL collection names) */
 function isValidCollectionName(name: string): boolean {
@@ -65,13 +65,39 @@ async function runDelete(client: Client, collection: string, id: string) {
   return NextResponse.json({ success: true, data: res.data });
 }
 
+/** Proxy a raw FQL query string to Fauna HTTP API (for shell). */
+async function runQuery(
+  endpoint: string,
+  secret: string,
+  queryString: string
+): Promise<Response> {
+  const url = endpoint.replace(/\/$/, "") + "/query/1";
+  return fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query: queryString }),
+  });
+}
+
+const NO_CONNECTION_MESSAGE = "No connection. Set and activate a connection on Home.";
+
 export async function POST(request: Request) {
   try {
     const client = getClient(request);
+    const conn = getConnectionFromRequest(request);
     const body = (await request.json()) as Record<string, unknown>;
 
     const updatePayload = body?.update as { collection?: string; id?: string; data?: unknown } | undefined;
     if (updatePayload && typeof updatePayload.collection === "string" && typeof updatePayload.id === "string") {
+      if (!client) {
+        return NextResponse.json(
+          { success: false, error: NO_CONNECTION_MESSAGE, code: "invalid_request" },
+          { status: 401 }
+        );
+      }
       return runUpdate(
         client,
         updatePayload.collection,
@@ -82,11 +108,40 @@ export async function POST(request: Request) {
 
     const deletePayload = body?.delete as { collection?: string; id?: string } | undefined;
     if (deletePayload && typeof deletePayload.collection === "string" && typeof deletePayload.id === "string") {
+      if (!client) {
+        return NextResponse.json(
+          { success: false, error: NO_CONNECTION_MESSAGE, code: "invalid_request" },
+          { status: 401 }
+        );
+      }
       return runDelete(client, deletePayload.collection, deletePayload.id);
     }
 
+    const queryString = typeof body?.query === "string" ? body.query.trim() : "";
+    if (queryString) {
+      if (!conn) {
+        return NextResponse.json(
+          { success: false, error: NO_CONNECTION_MESSAGE, code: "invalid_request" },
+          { status: 401 }
+        );
+      }
+      const res = await runQuery(conn.endpoint, conn.secret, queryString);
+      const text = await res.text();
+      let data: unknown;
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        return NextResponse.json(
+          { success: false, error: `Fauna returned non-JSON (${res.status}). ${text.slice(0, 200)}`, code: "invalid_response" },
+          { status: 502 }
+        );
+      }
+      const status = res.ok ? 200 : (res.status >= 400 ? res.status : 400);
+      return NextResponse.json(data, { status });
+    }
+
     return NextResponse.json(
-      { success: false, error: "Missing or invalid body: use { update: { collection, id, data } } or { delete: { collection, id } }", code: "invalid_request" },
+      { success: false, error: "Missing or invalid body: use { query: \"...\" } or { update: ... } or { delete: ... }", code: "invalid_request" },
       { status: 400 }
     );
   } catch (err) {

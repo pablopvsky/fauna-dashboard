@@ -193,17 +193,36 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
       });
-      const json = await res.json();
+      const text = await res.text();
+      let json: { success?: boolean; data?: unknown; error?: string | { message?: string }; code?: string };
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        const preview = text.slice(0, 150).replace(/\n/g, " ");
+        setOutput((prev) =>
+          prev.map((item) =>
+            item.id === entry.id
+              ? { ...item, error: `Server returned non-JSON (${res.status}). Check connection and auth. ${preview}${text.length > 150 ? "…" : ""}` }
+              : item
+          )
+        );
+        return;
+      }
+      const errMsg =
+        json.success === false
+          ? (typeof json.error === "string" ? json.error : (json.error as { message?: string })?.message ?? "Query failed")
+          : (json as { error?: { message?: string } }).error?.message;
+      const result = errMsg ? undefined : ("data" in json ? json.data : undefined);
 
       setOutput((prev) =>
         prev.map((item) =>
           item.id === entry.id
             ? {
-              ...item,
-              result: json.success ? json.data : undefined,
-              error: json.success ? undefined : json.error,
-              code: json.code,
-            }
+                ...item,
+                result,
+                error: errMsg,
+                code: json.code,
+              }
             : item
         )
       );

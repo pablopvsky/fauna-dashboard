@@ -19,7 +19,7 @@ import Button from "@/components/ui/Button";
 
 import type { SidebarMenuConfig } from "@/config/sidebar-menu";
 import { getSidebarMenuIcon } from "@/config/sidebar-menu";
-import { getStoredCredentials } from "@/utils/fauna-auth-store";
+import { getStoredCredentials, CONNECTION_CHANGED_EVENT } from "@/utils/fauna-auth-store";
 
 type AppSidebarProps = {
   menuItems: SidebarMenuConfig;
@@ -35,9 +35,17 @@ export function AppSidebar({
   const pathname = usePathname();
   const [hasAuth, setHasAuth] = useState<boolean | null>(null);
 
+  const refreshAuth = () => setHasAuth(!!getStoredCredentials());
+
   useEffect(() => {
-    setHasAuth(!!getStoredCredentials());
+    refreshAuth();
   }, [pathname]);
+
+  useEffect(() => {
+    const handler = () => refreshAuth();
+    window.addEventListener(CONNECTION_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(CONNECTION_CHANGED_EVENT, handler);
+  }, []);
 
   const isActive = (url: string) => pathname === url;
   const isAuthItem = (url: string) => url === AUTH_URL;

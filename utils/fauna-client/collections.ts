@@ -1,8 +1,6 @@
 import { fql } from "fauna";
 import type { Client } from "fauna";
 
-import { severClient } from ".";
-
 interface CollectionDefShape {
   name?: string;
   [key: string]: unknown;
@@ -25,14 +23,14 @@ function getCollectionNamesFromResponse(response: unknown): string[] {
 /**
  * Get a Set of all collection definitions. Response shape is a Page: { data: CollectionDef[], after? }.
  */
-export function listCollections(client: Client = severClient) {
+export function listCollections(client: Client) {
   return client.query(fql`Collection.all()`);
 }
 
 /**
  * Returns sorted collection names (for layout/sidebar). Uses listCollections() and extracts .name.
  */
-export async function getCollectionNamesList(client: Client = severClient): Promise<string[]> {
+export async function getCollectionNamesList(client: Client): Promise<string[]> {
   const response = await listCollections(client);
   return getCollectionNamesFromResponse(response);
 }
@@ -53,7 +51,7 @@ export interface GetCollectionDocumentsProps {
  * List documents from a collection by name with pagination.
  * Uses Collection(name)!.all().drop(cursor).take(size).
  */
-export function getCollectionDocuments(data: GetCollectionDocumentsProps, client: Client = severClient) {
+export function getCollectionDocuments(data: GetCollectionDocumentsProps, client: Client) {
   const { name, cursor = 0, size = 10 } = data;
 
   return client.query(
@@ -65,7 +63,7 @@ export function getCollectionDocuments(data: GetCollectionDocumentsProps, client
  * Get a single document by exact ID. Uses Collection(name)!.byId(id).
  * Returns the document or null if not found.
  */
-export function getCollectionDocumentById(collectionName: string, id: string, client: Client = severClient) {
+export function getCollectionDocumentById(collectionName: string, id: string, client: Client) {
   return client.query(
     fql`Collection(${collectionName})!.byId(${id})`,
   );
