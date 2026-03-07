@@ -1,6 +1,6 @@
 [
   { "title": "Home", "url": "/", "icon": "Gear" },
-  { "title": "Nodes", "url": "/nodes", "icon": "Brain" },
+  { "title": "Shell", "url": "/shell", "icon": "Terminal" },
   { "title": "Collections", "url": "/collections", "icon": "FolderOpen" },
-  { "title": "Shell", "url": "/shell", "icon": "Terminal" }
+  { "title": "Nodes", "url": "/nodes", "icon": "Brain" }
 ]
