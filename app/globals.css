@@ -191,20 +191,23 @@
   --aura-loader: var(--primary);
   --aura-skeleton-start: var(--gray-8);
   --aura-skeleton-end: var(--gray-5);
+  --aura-input-border-color: var(--gray-a6);
   --radius: 0.5rem;
 }
 
 @layer base {
+  @import "../styles/main.css";
   html {
     font-size: 17px;
   }
   main {
     background-color: var(--gray-1);
   }
+ 
 }
 
 @layer components {
-  @import "../styles/main.css";
+
 
   @import "../styles/accordion.css";
 
@@ -215,4 +218,8 @@
   @import "../styles/tooltip.css";
 
   @import "../styles/dialog.css";
+
+  input, select, textarea {
+    border: 1px solid var(--aura-input-border-color);
+  }
 }

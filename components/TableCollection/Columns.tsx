@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil1Icon, TrashIcon } from "@radix-ui/react-icons";
 import type { TableRowProps } from "./DataTable";
 
 export const DOCUMENT_COLUMN_ID = "document";
@@ -9,6 +10,14 @@ export interface DocumentColumnProps extends TableRowProps {
   truncateLength?: number;
   expandedId: string | null;
   onToggleExpand: (id: string) => void;
+}
+
+export interface ActionsColumnProps {
+  collectionName: string;
+  doc: unknown;
+  docId: string | null;
+  onEdit: (docId: string) => void;
+  onDelete: (docId: string) => void;
 }
 
 export function DocumentColumn({
@@ -26,25 +35,48 @@ export function DocumentColumn({
       : jsonStr.slice(0, truncateLength) + "…";
 
   return (
-    <div className="min-w-0 max-w-full">
+    <div className="min-w-0 max-w-full overflow-hidden">
       <button
         type="button"
         onClick={() => docId && onToggleExpand(docId)}
-        className="text-left font-mono text-xs text-gray-12 hover:text-accent-11 break-all cursor-pointer"
+        className="block w-full min-w-0 text-left font-mono text-xs text-gray-12 hover:text-accent-11 truncate cursor-pointer"
         title={isExpanded ? "Collapse" : "Expand"}
       >
-       {truncated}
+        {truncated}
       </button>
     </div>
   );
 }
 
-export function ActionsColumn() {
+export function ActionsColumn({
+  docId,
+  onEdit,
+  onDelete,
+}: ActionsColumnProps) {
+  if (docId === null) return null;
   return (
     <div className="flex items-center gap-1 shrink-0">
-      <span className="text-gray-10 text-xs">Edit</span>
-      <span className="text-gray-8">|</span>
-      <span className="text-gray-10 text-xs">Delete</span>
+      <button
+        type="button"
+        onClick={() => onEdit(docId)}
+        className="flex items-center gap-1 text-gray-11 hover:text-accent-11 text-xs transition-colors"
+        title="Edit document"
+      >
+
+        Edit
+      </button>
+      <span className="text-gray-8" aria-hidden>
+        |
+      </span>
+      <button
+        type="button"
+        onClick={() => onDelete(docId)}
+        className="flex items-center gap-1 text-gray-11 hover:text-red-11 text-xs transition-colors"
+        title="Delete document"
+      >
+
+        Delete
+      </button>
     </div>
   );
 }

@@ -14,6 +14,17 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AlertCircle, Inbox, SearchX } from "lucide-react";
 import { DocumentColumn, ActionsColumn } from "./Columns";
+import { EditDocumentDialog } from "./EditDocumentDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/AlertDialog";
 import { cn } from "@/utils/class-names";
 
 export interface TableRowProps {
@@ -64,6 +75,8 @@ export function DataTable({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchById, setSearchById] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
 
@@ -156,6 +169,42 @@ export function DataTable({
     setExpandedId((prev) => (prev === id ? null : id));
   }, []);
 
+  const onEdit = useCallback((id: string) => setEditingId(id), []);
+  const onDelete = useCallback((id: string) => setDeletingId(id), []);
+
+  const handleEditSaved = useCallback(() => {
+    setEditingId(null);
+    loadPage(page);
+  }, [loadPage, page]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (deletingId === null) return;
+    const id = deletingId;
+    setDeletingId(null);
+    try {
+      const query = `Collection("${collectionName}").byId("${id}").delete()`;
+      const res = await fetch("/api/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const body = await res.json();
+      if (!body.success) {
+        setError(body.error ?? "Delete failed");
+        return;
+      }
+      setError(null);
+      loadPage(page);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Request failed");
+    }
+  }, [deletingId, collectionName, page, loadPage]);
+
+  const editingDoc =
+    editingId !== null
+      ? rows.find((d) => getDocId(d) === editingId) ?? null
+      : null;
+
   const headers = [
     { id: "document", header: "Document" },
     { id: "actions", header: "Actions" },
@@ -179,7 +228,15 @@ export function DataTable({
         },
         {
           id: `${id}-actions`,
-          content: <ActionsColumn />,
+          content: (
+            <ActionsColumn
+              collectionName={collectionName}
+              doc={doc}
+              docId={getDocId(doc)}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ),
         },
       ],
     };
@@ -238,7 +295,7 @@ export function DataTable({
 
       {/* Desktop table */}
       <div className="relative w-full overflow-x-auto border border-gray-6 rounded-md hidden sm:block">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[200px]">Document</TableHead>
@@ -285,7 +342,7 @@ export function DataTable({
                   docId !== null && expandedId === docId;
                 return [
                   <TableRow key={r.id}>
-                    <TableCell className="align-top max-w-0">
+                    <TableCell className="align-top min-w-0 overflow-hidden">
                       <DocumentColumn
                         doc={r.doc}
                         expandedId={expandedId}
@@ -293,7 +350,13 @@ export function DataTable({
                       />
                     </TableCell>
                     <TableCell className="shrink-0 align-top">
-                      <ActionsColumn />
+                      <ActionsColumn
+                        collectionName={collectionName}
+                        doc={r.doc}
+                        docId={docId}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                      />
                     </TableCell>
                   </TableRow>,
                   isExpanded ? (
@@ -346,7 +409,35 @@ export function DataTable({
           ) : undefined
         }
       />
-       {searchById === null && (
+       {editingDoc && (
+        <EditDocumentDialog
+          open={editingId !== null}
+          onOpenChange={(open) => !open && setEditingId(null)}
+          collectionName={collectionName}
+          doc={editingDoc}
+          docId={editingId!}
+          onSaved={handleEditSaved}
+        />
+      )}
+
+      <AlertDialog open={deletingId !== null} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. The document will be permanently removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-9 text-white hover:bg-red-10">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {searchById === null && (
             <div className="flex flex-row items-center justify-center gap-2">
               <Button
                 variant="pill"

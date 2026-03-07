@@ -6,4 +6,4 @@ export {
   DOCUMENT_COLUMN_ID,
   ACTIONS_COLUMN_ID,
 } from "./Columns";
-export type { DocumentColumnProps } from "./Columns";
+export type { DocumentColumnProps, ActionsColumnProps } from "./Columns";
