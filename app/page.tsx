@@ -1,71 +1,125 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { SchemaGraph } from "@/components/SchemaGraph";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerClose,
-} from "@/components/ui/Drawer";
-import { SCHEMA_NODES } from "@/utils/schema-graph-data";
 import { Button } from "@/components/ui/Button";
-import { DataTable } from "@/components/TableCollection";
-import { ArrowRight, X, ExpandIcon, ExternalLink, Maximize, Fullscreen } from "lucide-react";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/Label";
+import {
+  getStoredCredentials,
+  setStoredCredentials,
+  clearStoredCredentials,
+} from "@/utils/fauna-auth-store";
+import { CheckIcon } from "@radix-ui/react-icons";
 
-export default function Home() {
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+const DEFAULT_ENDPOINT = "http://localhost:8443";
 
-  const selectedNode = selectedNodeId
-    ? SCHEMA_NODES.find((n) => n.id === selectedNodeId)
-    : null;
-  const title = String(selectedNode?.data?.label ?? "Details");
+export default function HomePage() {
+  const [endpoint, setEndpoint] = useState(DEFAULT_ENDPOINT);
+  const [secret, setSecret] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [hasStored, setHasStored] = useState(false);
 
-  const handleOpenChange = (next: boolean) => {
-    if (!next) setSelectedNodeId(null);
+  useEffect(() => {
+    const creds = getStoredCredentials();
+    setHasStored(!!creds);
+    if (creds) {
+      setEndpoint(creds.endpoint);
+      setSecret(""); // Don't pre-fill secret in UI for security
+    }
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedEndpoint = endpoint.trim();
+    const trimmedSecret = secret.trim();
+    if (!trimmedEndpoint || !trimmedSecret) return;
+    setStoredCredentials({ endpoint: trimmedEndpoint, secret: trimmedSecret });
+    setSaved(true);
+    setHasStored(true);
+    setSecret("");
+  };
+
+  const handleClear = () => {
+    clearStoredCredentials();
+    setHasStored(false);
+    setEndpoint(DEFAULT_ENDPOINT);
+    setSecret("");
+    setSaved(false);
   };
 
   return (
-    <main>
-      <SchemaGraph
-        selectedNodeId={selectedNodeId}
-        onNodeSelect={setSelectedNodeId}
-      />
-      <Drawer
-        open={!!selectedNodeId}
-        onOpenChange={handleOpenChange}
-        direction="right"
-      >
-        <DrawerContent className="inset-x-auto left-auto right-0 top-3 bottom-3 mt-0 flex w-40 max-w-[85vw] flex-col rounded-l-md rounded-t-none border-l border-t border-b border-gray-6 [&>div:first-child]:hidden">
-          <DrawerHeader className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-gray-6 p-1 px-2">
-            <DrawerTitle asChild>
-              <Link
-                href={selectedNodeId ? `/collections/${selectedNodeId}` : "#"}
-                className="text-lg font-semibold leading-none tracking-tight text-gray-12 hover:underline"
-              >
-                {title}
-                <ExternalLink className="icon ml-0.5" />
-              </Link>
-            </DrawerTitle>
-            <DrawerClose asChild>
-              <Button variant="link" size="icon" aria-label="Close">
-                <X className="icon" />
+    <main className="p-4 max-w-lg mx-auto">
+      <h1 className="h2 text-gray-12 mb-1">Connect to Fauna</h1>
+      <p className="text-sm text-gray-11 mb-4">
+        Enter your endpoint and secret to use the dashboard. Credentials are stored locally in your browser (like Apollo GraphQL) and are not sent to any server except your Fauna instance.
+      </p>
+
+      {saved && (
+        <div className="flex items-center gap-2 text-green-11 text-sm mb-4 p-2 rounded bg-green-2 border border-green-6">
+          <CheckIcon className="icon shrink-0" aria-hidden />
+          <span>Credentials saved. You can open Nodes or Collections.</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="fauna-endpoint">FAUNA_ENDPOINT</Label>
+          <Input
+            id="fauna-endpoint"
+            type="url"
+            value={endpoint}
+            onChange={(e) => setEndpoint(e.target.value)}
+            placeholder={DEFAULT_ENDPOINT}
+            className="font-mono text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="fauna-secret">FAUNA_SECRET</Label>
+          <Input
+            id="fauna-secret"
+            type="password"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            placeholder={hasStored ? "•••••••• (enter new to change)" : "Your database secret"}
+            className="font-mono text-sm"
+            autoComplete="off"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" disabled={!endpoint.trim() || !secret.trim()}>
+            Save & connect
+          </Button>
+          {hasStored && (
+            <Button type="button" variant="pill" size="sm" onClick={handleClear}>
+              Clear stored credentials
+            </Button>
+          )}
+        </div>
+      </form>
+
+      {hasStored && (
+        <nav className="mt-6 pt-4 border-t border-gray-6">
+          <p className="text-sm text-gray-11 mb-2">Go to</p>
+          <ul className="flex flex-wrap gap-2">
+            <li>
+              <Button variant="pill" size="sm" asChild>
+                <Link href="/nodes">Nodes</Link>
               </Button>
-            </DrawerClose>
-          </DrawerHeader>
-          <div className="min-h-0 flex-1 overflow-auto p-1 px-2">
-            {selectedNodeId && (
-              <DataTable
-                collectionName={selectedNodeId}
-                pageSize={25}
-                className="w-full"
-              />
-            )}
-          </div>
-        </DrawerContent>
-      </Drawer>
+            </li>
+            <li>
+              <Button variant="pill" size="sm" asChild>
+                <Link href="/collections">Collections</Link>
+              </Button>
+            </li>
+            <li>
+              <Button variant="pill" size="sm" asChild>
+                <Link href="/shell">Shell</Link>
+              </Button>
+            </li>
+          </ul>
+        </nav>
+      )}
     </main>
   );
 }

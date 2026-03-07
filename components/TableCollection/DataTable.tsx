@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/AlertDialog";
 import { cn } from "@/utils/class-names";
+import { dashboardFetch } from "@/utils/dashboard-api";
 
 export interface TableRowProps {
   doc: unknown;
@@ -93,7 +94,7 @@ export function DataTable({
       setSearchById(null);
       try {
         const url = `/api/collections/${encodeURIComponent(collectionName)}?page=${p}&pageSize=${pageSize}`;
-        const res = await fetch(url);
+        const res = await dashboardFetch(url);
         const body: ApiResponse = await res.json();
         if (!body.success || !Array.isArray(body.data)) {
           setError(body.error ?? "Failed to load collection");
@@ -121,7 +122,7 @@ export function DataTable({
       setError(null);
       try {
         const url = `/api/collections/${encodeURIComponent(collectionName)}?id=${encodeURIComponent(trimmed)}`;
-        const res = await fetch(url);
+        const res = await dashboardFetch(url);
         const body: ApiResponse = await res.json();
         if (!body.success) {
           setError(body.error ?? "Search failed");
@@ -183,7 +184,7 @@ export function DataTable({
     const id = deletingId;
     setDeletingId(null);
     try {
-      const res = await fetch("/api/query", {
+      const res = await dashboardFetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

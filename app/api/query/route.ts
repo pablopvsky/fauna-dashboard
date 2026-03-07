@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fql } from "fauna";
-import { severClient } from "@/utils/fauna-client";
+import type { Client } from "fauna";
+import { getClient } from "@/utils/fauna-client";
 
 /** Collection name: letters, numbers, underscore (matches FSL collection names) */
 function isValidCollectionName(name: string): boolean {
@@ -23,7 +24,7 @@ function stripMetadataFields(data: unknown): unknown {
   return out;
 }
 
-async function runUpdate(collection: string, id: string, data: unknown) {
+async function runUpdate(client: Client, collection: string, id: string, data: unknown) {
   if (!isValidCollectionName(collection) || !isValidDocumentId(id)) {
     return NextResponse.json(
       { success: false, error: "Invalid collection name or document id", code: "invalid_request" },
@@ -31,7 +32,7 @@ async function runUpdate(collection: string, id: string, data: unknown) {
     );
   }
   const payload = stripMetadataFields(data);
-  const response = await severClient.query(
+  const response = await client.query(
     fql`Collection(${collection})!.byId(${id})!.update(${payload})`
   );
   const res = response as { data?: unknown; error?: { message?: string; code?: string } };
@@ -44,14 +45,14 @@ async function runUpdate(collection: string, id: string, data: unknown) {
   return NextResponse.json({ success: true, data: res.data });
 }
 
-async function runDelete(collection: string, id: string) {
+async function runDelete(client: Client, collection: string, id: string) {
   if (!isValidCollectionName(collection) || !isValidDocumentId(id)) {
     return NextResponse.json(
       { success: false, error: "Invalid collection name or document id", code: "invalid_request" },
       { status: 400 }
     );
   }
-  const response = await severClient.query(
+  const response = await client.query(
     fql`Collection(${collection})!.byId(${id})!.delete()`
   );
   const res = response as { data?: unknown; error?: { message?: string; code?: string } };
@@ -66,11 +67,13 @@ async function runDelete(collection: string, id: string) {
 
 export async function POST(request: Request) {
   try {
+    const client = getClient(request);
     const body = (await request.json()) as Record<string, unknown>;
 
     const updatePayload = body?.update as { collection?: string; id?: string; data?: unknown } | undefined;
     if (updatePayload && typeof updatePayload.collection === "string" && typeof updatePayload.id === "string") {
       return runUpdate(
+        client,
         updatePayload.collection,
         updatePayload.id,
         updatePayload.data
@@ -79,7 +82,7 @@ export async function POST(request: Request) {
 
     const deletePayload = body?.delete as { collection?: string; id?: string } | undefined;
     if (deletePayload && typeof deletePayload.collection === "string" && typeof deletePayload.id === "string") {
-      return runDelete(deletePayload.collection, deletePayload.id);
+      return runDelete(client, deletePayload.collection, deletePayload.id);
     }
 
     return NextResponse.json(

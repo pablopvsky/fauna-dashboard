@@ -6,6 +6,7 @@ import { Eraser, Download, FolderOpen, Play, Copy, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { Separator } from "@/components/ui/Separator";
+import { dashboardFetch } from "@/utils/dashboard-api";
 import "@uiw/react-textarea-code-editor/dist.css";
 import "@/styles/shell-editor-pink.css";
 
@@ -187,7 +188,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
     setIsRunning(true);
 
     try {
-      const res = await fetch("/api/query", {
+      const res = await dashboardFetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),

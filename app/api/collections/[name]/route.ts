@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  getClient,
   getCollectionDocuments,
   getCollectionDocumentById,
 } from "@/utils/fauna-client";
@@ -26,12 +27,13 @@ function isFaunaNotFound(doc: unknown): boolean {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ name: string }> },
 ) {
   try {
+    const client = getClient(request);
     const { name } = await params;
-    const { searchParams } = new URL(_request.url);
+    const { searchParams } = new URL(request.url);
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
     const pageSize = Math.min(
       MAX_PAGE_SIZE,
@@ -56,7 +58,7 @@ export async function GET(
           { status: 400 },
         );
       }
-      const response = await getCollectionDocumentById(name, idParam);
+      const response = await getCollectionDocumentById(name, idParam, client);
       const doc = (response as { data?: unknown })?.data;
       if (doc === null || doc === undefined || isFaunaNotFound(doc)) {
         return NextResponse.json({
@@ -75,11 +77,10 @@ export async function GET(
 
     const offset = (page - 1) * pageSize;
     const take = pageSize + 1;
-    const response = await getCollectionDocuments({
-      name,
-      cursor: offset,
-      size: take,
-    });
+    const response = await getCollectionDocuments(
+      { name, cursor: offset, size: take },
+      client
+    );
 
     const pageResult = (response as { data?: { data?: unknown[]; after?: string } })
       ?.data;

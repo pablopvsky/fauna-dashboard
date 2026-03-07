@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/utils/class-names";
+import { dashboardFetch } from "@/utils/dashboard-api";
 
 export interface EditDocumentDialogProps {
   open: boolean;
@@ -73,7 +74,7 @@ export function EditDocumentDialog({
     setSaveError(null);
     setSaving(true);
     try {
-      const res = await fetch("/api/query", {
+      const res = await dashboardFetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
