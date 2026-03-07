@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -34,6 +35,8 @@ export interface TableRowProps {
 export interface TableCollectionProps {
   collectionName: string;
   pageSize?: number;
+  /** Initial page from URL (e.g. ?page=2). Defaults to 1. */
+  initialPage?: number;
   className?: string;
 }
 
@@ -67,11 +70,14 @@ function safeStringify(value: unknown): string {
 export function DataTable({
   collectionName,
   pageSize = DEFAULT_PAGE_SIZE,
+  initialPage,
   className,
 }: TableCollectionProps) {
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const pathname = usePathname();
+  const initialPageNum = initialPage ?? 1;
+  const [page, setPage] = useState(initialPageNum);
   const [rows, setRows] = useState<unknown[]>([]);
-  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -92,16 +98,14 @@ export function DataTable({
         if (!body.success || !Array.isArray(body.data)) {
           setError(body.error ?? "Failed to load collection");
           setRows([]);
-          setHasMore(false);
+        
           return;
         }
         setRows(body.data);
-        setHasMore(Boolean(body.hasMore));
         setPage(p);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Request failed");
         setRows([]);
-        setHasMore(false);
       } finally {
         setLoading(false);
       }
@@ -123,12 +127,10 @@ export function DataTable({
           setError(body.error ?? "Search failed");
           setRows([]);
           setSearchById(trimmed);
-          setHasMore(false);
           return;
         }
         setRows(Array.isArray(body.data) ? body.data : []);
         setSearchById(trimmed);
-        setHasMore(false);
         if (body.error && body.byId) {
           setError("Not found");
         } else {
@@ -138,7 +140,6 @@ export function DataTable({
         setError(e instanceof Error ? e.message : "Request failed");
         setRows([]);
         setSearchById(trimmed);
-        setHasMore(false);
       } finally {
         setLoading(false);
       }
@@ -147,8 +148,8 @@ export function DataTable({
   );
 
   useEffect(() => {
-    loadPage(1);
-  }, [loadPage]);
+    loadPage(initialPageNum);
+  }, [loadPage, initialPageNum]);
 
   const handleSearchSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -182,11 +183,12 @@ export function DataTable({
     const id = deletingId;
     setDeletingId(null);
     try {
-      const query = `Collection("${collectionName}").byId("${id}").delete()`;
       const res = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({
+          delete: { collection: collectionName, id },
+        }),
       });
       const body = await res.json();
       if (!body.success) {
@@ -438,12 +440,19 @@ export function DataTable({
       </AlertDialog>
 
       {searchById === null && (
-            <div className="flex flex-row items-center justify-center gap-2">
+            <nav
+              className="flex flex-row items-center justify-center gap-2 py-2"
+              aria-label="Pagination"
+            >
               <Button
                 variant="pill"
                 size="sm"
                 disabled={page <= 1 || loading}
-                onClick={() => loadPage(page - 1)}
+                onClick={() => {
+                  const prev = page - 1;
+                  loadPage(prev);
+                  router.replace(prev === 1 ? pathname : `${pathname}?page=${prev}`);
+                }}
               >
                 Previous
               </Button>
@@ -451,12 +460,16 @@ export function DataTable({
               <Button
                 variant="pill"
                 size="sm"
-                disabled={!hasMore || loading}
-                onClick={() => loadPage(page + 1)}
+                disabled={loading}
+                onClick={() => {
+                  const next = page + 1;
+                  loadPage(next);
+                  router.replace(`${pathname}?page=${next}`);
+                }}
               >
                 Next
               </Button>
-            </div>
+            </nav>
           )}
     </div>
   );

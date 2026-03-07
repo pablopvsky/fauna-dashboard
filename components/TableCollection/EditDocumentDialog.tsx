@@ -73,15 +73,25 @@ export function EditDocumentDialog({
     setSaveError(null);
     setSaving(true);
     try {
-      const query = `Collection("${collectionName}").byId("${docId}").update(${JSON.stringify(parsed.data)})`;
       const res = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({
+          update: {
+            collection: collectionName,
+            id: docId,
+            data: parsed.data,
+          },
+        }),
       });
-      const body = await res.json();
+      const body = (await res.json()) as { success?: boolean; error?: string; constraint_failures?: unknown[] };
       if (!body.success) {
-        setSaveError(body.error ?? "Update failed");
+        const msg = body.error ?? "Update failed";
+        const details =
+          Array.isArray(body.constraint_failures) && body.constraint_failures.length > 0
+            ? ` ${JSON.stringify(body.constraint_failures)}`
+            : "";
+        setSaveError(msg + details);
         return;
       }
       onSaved();
@@ -138,7 +148,7 @@ export function EditDocumentDialog({
             </p>
           )}
         </div>
-        <DialogFooter className="flex-shrink-0 gap-2">
+        <DialogFooter className="flex-shrink-0 gap-1 mt-2 flex">
         
           <Button variant="pill" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
