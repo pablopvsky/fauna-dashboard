@@ -1,0 +1,15 @@
+/* Light theme with pink accents for Shell panel code editor */
+.shell-query-editor--pink .w-tc-editor[data-color-mode="light"],
+.shell-query-editor--pink.w-tc-editor[data-color-mode="light"] {
+  --color-fg-default: var(--gray-9);;
+  --color-canvas-subtle: #fdf2f8;
+  --color-prettylights-syntax-comment: #9d174d;
+  --color-prettylights-syntax-entity-tag: #be185d;
+  --color-prettylights-syntax-entity: #c026d3;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #831843;
+  --color-prettylights-syntax-constant: #9d174d;
+  --color-prettylights-syntax-string: #be185d;
+  --color-prettylights-syntax-keyword: #db2777;
+  --color-prettylights-syntax-markup-bold: var(--gray-12);
+  --color-prettylights-syntax-string-regexp: #a21caf;
+}

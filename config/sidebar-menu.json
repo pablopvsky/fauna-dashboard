@@ -1,0 +1,5 @@
+[
+  { "title": "Dashboard", "url": "/", "icon": "Brain" },
+  { "title": "Collections", "url": "/collections", "icon": "FolderOpen" },
+  { "title": "Shell", "url": "/shell", "icon": "Terminal" }
+]
