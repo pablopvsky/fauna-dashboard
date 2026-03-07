@@ -2,5 +2,12 @@
   { "title": "Auth", "url": "/", "icon": "Gear" },
   { "title": "Shell", "url": "/shell", "icon": "Terminal" },
   { "title": "Collections", "url": "/collections", "icon": "FolderOpen" },
-  { "title": "Nodes", "url": "/nodes", "icon": "Brain" }
+  { "title": "Nodes", "url": "/nodes", "icon": "Brain" },
+  { "type": "separator" },
+  {
+    "title": "Documentation",
+    "url": "https://docs.faunadb.org/fauna/current/",
+    "icon": "BookOpen",
+    "type": "external"
+  }
 ]
