@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Table,
@@ -291,8 +292,15 @@ export function DataTable({
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-6 bg-red-2 px-2 py-1.5 text-sm text-red-11">
-          {error}
+        <div className="rounded-md border border-red-6 bg-red-2 px-2 py-1.5 text-sm text-red-11 space-y-1">
+          <p>{error}</p>
+          {error.includes("No connection") && (
+            <p>
+              <Link href="/" className="text-accent-11 hover:underline">
+                Set and activate a connection on Home →
+              </Link>
+            </p>
+          )}
         </div>
       )}
 

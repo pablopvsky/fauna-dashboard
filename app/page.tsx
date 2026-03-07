@@ -196,29 +196,6 @@ export default function HomePage() {
         </ul>
       )}
 
-      {data.connections.length > 0 && data.activeId && (
-        <nav className="mt-6 pt-4 border-t border-gray-6">
-          <p className="text-sm text-gray-11 mb-2">Go to</p>
-          <ul className="flex flex-wrap gap-2">
-            <li>
-              <Button variant="pill" size="sm" asChild>
-                <Link href="/nodes">Nodes</Link>
-              </Button>
-            </li>
-            <li>
-              <Button variant="pill" size="sm" asChild>
-                <Link href="/collections">Collections</Link>
-              </Button>
-            </li>
-            <li>
-              <Button variant="pill" size="sm" asChild>
-                <Link href="/shell">Shell</Link>
-              </Button>
-            </li>
-          </ul>
-        </nav>
-      )}
-
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
