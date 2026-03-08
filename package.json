@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/preflight.mjs && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "preflight": "node scripts/preflight.mjs",
