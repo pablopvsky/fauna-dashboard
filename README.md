@@ -1,6 +1,11 @@
 # fauna-dashboard
 
-Fauna DB dashboard — run the UI, then configure your Fauna endpoint and secret in the app.
+Fauna DB dashboard — run the UI, then configure your Fauna endpoint and secret in the app. This UI connects to [FaunaDB](https://github.com/fauna/faunadb) (or a compatible fork) via the Fauna API.
+
+## Credits
+
+- **FaunaDB** — The database this dashboard visualizes is [FaunaDB](https://github.com/fauna/faunadb), licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0). FaunaDB is copyright FaunaDB Foundation.
+- This dashboard is a separate client application and is not derived from the FaunaDB server code.
 
 ## Run with Docker (one command)
 
@@ -31,3 +36,7 @@ Or build the image locally:
 docker build -t fauna-dashboard .
 docker run -p 3000:3000 fauna-dashboard
 ```
+
+## License
+
+This project (fauna-dashboard) is provided under the terms of its LICENSE file in this repository. The FaunaDB database it connects to is licensed separately (see [Credits](#credits)).
