@@ -2,7 +2,6 @@
   { "title": "Auth", "url": "/", "icon": "Gear" },
   { "title": "Shell", "url": "/shell", "icon": "Terminal" },
   { "title": "Collections", "url": "/collections", "icon": "FolderOpen" },
-  { "title": "Nodes", "url": "/nodes", "icon": "Brain" },
   { "type": "separator" },
   {
     "title": "Documentation",
