@@ -25,7 +25,10 @@ import type {
   SidebarMenuLinkItem,
 } from "@/config/sidebar-menu";
 import { getSidebarMenuIcon } from "@/config/sidebar-menu";
-import { getStoredCredentials, CONNECTION_CHANGED_EVENT } from "@/utils/fauna-auth-store";
+import {
+  getStoredCredentials,
+  CONNECTION_CHANGED_EVENT,
+} from "@/utils/fauna-auth-store";
 
 type AppSidebarProps = {
   menuItems: SidebarMenuConfig;
@@ -34,12 +37,14 @@ type AppSidebarProps = {
 
 const AUTH_URL = "/";
 
-function isSeparator(item: SidebarMenuConfigItem): item is { type: "separator" } {
+function isSeparator(
+  item: SidebarMenuConfigItem,
+): item is { type: "separator" } {
   return "type" in item && item.type === "separator";
 }
 
 function isExternalItem(
-  item: SidebarMenuConfigItem
+  item: SidebarMenuConfigItem,
 ): item is SidebarMenuExternalItem {
   return "type" in item && item.type === "external";
 }
@@ -50,10 +55,8 @@ function isLinkItem(item: SidebarMenuConfigItem): item is SidebarMenuLinkItem {
 
 function splitMenuItems(menuItems: SidebarMenuConfig) {
   const sepIndex = menuItems.findIndex(isSeparator);
-  const main =
-    sepIndex < 0 ? menuItems : menuItems.slice(0, sepIndex);
-  const afterSeparator =
-    sepIndex < 0 ? [] : menuItems.slice(sepIndex + 1);
+  const main = sepIndex < 0 ? menuItems : menuItems.slice(0, sepIndex);
+  const afterSeparator = sepIndex < 0 ? [] : menuItems.slice(sepIndex + 1);
   return { main, afterSeparator };
 }
 
@@ -93,12 +96,7 @@ export function AppSidebar({
           tooltip={item.title}
         >
           {disabled ? (
-            <Button
-              mode="menu"
-              disabled
-              aria-disabled="true"
-              className="gap-1 w-full justify-start group-data-[collapsible=icon]:justify-center font-medium opacity-50 cursor-not-allowed pointer-events-none"
-            >
+            <Button mode="menu" disabled aria-disabled="true"  className="gap-1">
               {IconComponent && (
                 <IconComponent
                   className="icon shrink-0 text-accent-10"
@@ -110,11 +108,7 @@ export function AppSidebar({
               </span>
             </Button>
           ) : (
-            <Button
-              mode="menu"
-              asChild
-              className="gap-1 w-full justify-start group-data-[collapsible=icon]:justify-center font-medium cursor-pointer"
-            >
+            <Button mode="menu" asChild  className="gap-1 w-full justify-start">
               <Link href={item.url}>
                 {IconComponent && (
                   <IconComponent
@@ -138,16 +132,12 @@ export function AppSidebar({
     return (
       <SidebarMenuItem key={item.url}>
         <SidebarMenuButton asChild tooltip={item.title}>
-          <Button
-            mode="menu"
-            asChild
-            className="gap-1 w-full justify-start group-data-[collapsible=icon]:justify-center font-medium cursor-pointer"
-          >
+          <Button mode="menu" asChild>
             <a
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="contents"
+              className="gap-1"
             >
               {IconComponent && (
                 <IconComponent
@@ -192,7 +182,7 @@ export function AppSidebar({
                       ? renderExternalItem(item)
                       : isLinkItem(item)
                         ? renderLinkItem(item)
-                        : null
+                        : null,
                   )}
                 </SidebarMenu>
               </SidebarGroupContent>
