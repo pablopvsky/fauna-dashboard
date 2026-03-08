@@ -12,10 +12,14 @@ Fauna DB dashboard — run the UI, then configure your Fauna endpoint and secret
 The image is published on [Docker Hub](https://hub.docker.com/r/pablopvsky/fauna-dashboard) as `pablopvsky/fauna-dashboard:latest` (public). Pull and run in the background; the container keeps running and restarts on crash or reboot:
 
 ```bash
-docker run -d -p 3000:3000 --restart unless-stopped pablopvsky/fauna-dashboard:latest
+docker run -d \
+  --name fauna-dashboard \
+  --restart unless-stopped \
+  -p 8445:3000 \
+  pablopvsky/fauna-dashboard:latest
 ```
 
-Then open **http://localhost:3000**. Fauna credentials are set in the dashboard UI (Home / connection), not via environment variables.
+Then open **http://localhost:8445** (dashboard listens on 3000 inside the container; host port 8445 avoids conflicts with other services). Fauna credentials are set in the dashboard UI (Home / connection), not via environment variables.
 
 - **`-d`** — run detached (background); you can close the terminal.
 - **`--restart unless-stopped`** — restart the container if it exits or after a server reboot.
