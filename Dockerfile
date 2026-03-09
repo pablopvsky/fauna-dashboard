@@ -48,6 +48,9 @@ EXPOSE 3000
 
 ENV PORT=3000
 
+# When running alongside the faunadb container on the same Docker network, set
+# FAUNA_DEFAULT_ENDPOINT so the Auth page suggests the correct URL (e.g.
+# http://faunadb:8443). Example: docker run -e FAUNA_DEFAULT_ENDPOINT=http://faunadb:8443 ...
 # server.js is created by next build from the standalone output
 ENV HOSTNAME="0.0.0.0"
 CMD ["node", "server.js"]

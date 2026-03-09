@@ -30,7 +30,7 @@ function notifyConnectionChanged() {
   }
 }
 
-const DEFAULT_ENDPOINT = "http://localhost:8443";
+const FALLBACK_ENDPOINT = "http://localhost:8443";
 
 function maskEndpoint(url: string): string {
   try {
@@ -50,17 +50,16 @@ type ConnectionFormState = {
   secret: string;
 };
 
-const emptyForm: ConnectionFormState = {
-  name: "",
-  endpoint: DEFAULT_ENDPOINT,
-  secret: "",
-};
+function emptyFormState(defaultEndpoint: string): ConnectionFormState {
+  return { name: "", endpoint: defaultEndpoint, secret: "" };
+}
 
 export default function HomePage() {
+  const [defaultEndpoint, setDefaultEndpoint] = useState(FALLBACK_ENDPOINT);
   const [data, setData] = useState<ReturnType<typeof getConnections>>({ connections: [], activeId: null });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ConnectionFormState>(emptyForm);
+  const [form, setForm] = useState<ConnectionFormState>(() => emptyFormState(FALLBACK_ENDPOINT));
 
   const refresh = () => setData(getConnections());
 
@@ -68,9 +67,18 @@ export default function HomePage() {
     refresh();
   }, []);
 
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.ok ? r.json() : null)
+      .then((json: { defaultEndpoint?: string } | null) => {
+        if (json?.defaultEndpoint?.trim()) setDefaultEndpoint(json.defaultEndpoint.trim());
+      })
+      .catch(() => {});
+  }, []);
+
   const openCreate = () => {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(emptyFormState(defaultEndpoint));
     setDialogOpen(true);
   };
 
@@ -101,7 +109,7 @@ export default function HomePage() {
     notifyConnectionChanged();
     refresh();
     setDialogOpen(false);
-    setForm(emptyForm);
+    setForm(emptyFormState(defaultEndpoint));
   };
 
   const handleActivate = (id: string) => {
@@ -219,7 +227,7 @@ export default function HomePage() {
                 type="url"
                 value={form.endpoint}
                 onChange={(e) => setForm((f) => ({ ...f, endpoint: e.target.value }))}
-                placeholder={DEFAULT_ENDPOINT}
+                placeholder={defaultEndpoint}
                 className="font-mono text-sm"
               />
             </div>

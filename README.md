@@ -21,6 +21,27 @@ docker run -d \
 
 Then open **http://localhost:8445** (dashboard listens on 3000 inside the container; host port 8445 avoids conflicts with other services). Fauna credentials are set in the dashboard UI (Home / connection), not via environment variables.
 
+### Connecting to Fauna DB running in Docker
+
+If the Fauna DB container (e.g. `faunadb`) runs on the **same Docker network** as the dashboard, the dashboard container must use the **database container’s hostname** as the endpoint, not `localhost`. Use a shared network and set the default endpoint via env so the Auth page suggests the right URL:
+
+```bash
+# Create a network and run faunadb (example name: faunadb)
+docker network create fauna-net
+docker run -d --name faunadb --network fauna-net -p 8443:8443 -p 8444:8444 pablopvsky/faunadb:latest
+
+# Run the dashboard on the same network with default endpoint = container hostname
+docker run -d \
+  --name fauna-dashboard \
+  --network fauna-net \
+  -e FAUNA_DEFAULT_ENDPOINT=http://faunadb:8443 \
+  --restart unless-stopped \
+  -p 8445:3000 \
+  pablopvsky/fauna-dashboard:latest
+```
+
+Then open **http://localhost:8445**, add a connection (Endpoint will default to `http://faunadb:8443`), enter your secret, and save.
+
 - **`-d`** — run detached (background); you can close the terminal.
 - **`--restart unless-stopped`** — restart the container if it exits or after a server reboot.
 - To stop: `docker stop $(docker ps -q --filter ancestor=pablopvsky/fauna-dashboard:latest)`
