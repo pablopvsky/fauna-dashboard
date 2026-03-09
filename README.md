@@ -28,7 +28,16 @@ If the Fauna DB container (e.g. `faunadb`) runs on the **same Docker network** a
 ```bash
 # Create a network and run faunadb (example name: faunadb)
 docker network create fauna-net
-docker run -d --name faunadb --network fauna-net -p 8443:8443 -p 8444:8444 pablopvsky/faunadb:latest
+docker rm -f faunadb
+docker run -d \
+  --name faunadb \
+  --network fauna-net \
+  --restart unless-stopped \
+  -p 8443:8443 \
+  -p 8444:8444 \
+  -v faunadb-data:/opt/fauna/data \
+  -v faunadb-log:/opt/fauna/log \
+  pablopvsky/faunadb:latest
 
 # Run the dashboard on the same network with default endpoint = container hostname
 docker run -d \
