@@ -24,7 +24,7 @@ function getCollectionNamesFromResponse(response: unknown): string[] {
  * Get a Set of all collection definitions. Response shape is a Page: { data: CollectionDef[], after? }.
  */
 export function listCollections(client: Client) {
-  return client.query(fql`Collection.all()`);
+  return client.query(fql`Collection.all().pageSize(999)`);
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -39,6 +39,8 @@ export interface TableCollectionProps {
   pageSize?: number;
   /** Initial page from URL (e.g. ?page=2). Defaults to 1. */
   initialPage?: number;
+  /** When this value changes, the table refetches the current page. */
+  refreshKey?: number;
   className?: string;
 }
 
@@ -73,6 +75,7 @@ export function DataTable({
   collectionName,
   pageSize = DEFAULT_PAGE_SIZE,
   initialPage,
+  refreshKey,
   className,
 }: TableCollectionProps) {
   const router = useRouter();
@@ -87,6 +90,7 @@ export function DataTable({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [searchById, setSearchById] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState("");
+  const prevRefreshKeyRef = useRef(refreshKey);
 
   const loadPage = useCallback(
     async (p: number) => {
@@ -152,6 +156,14 @@ export function DataTable({
   useEffect(() => {
     loadPage(initialPageNum);
   }, [loadPage, initialPageNum]);
+
+  useEffect(() => {
+    if (refreshKey === undefined) return;
+    if (prevRefreshKeyRef.current !== refreshKey) {
+      prevRefreshKeyRef.current = refreshKey;
+      loadPage(page);
+    }
+  }, [refreshKey, page, loadPage]);
 
   const handleSearchSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -441,7 +453,7 @@ export function DataTable({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-9 text-white hover:bg-red-10">
+            <AlertDialogAction onClick={handleDeleteConfirm}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
