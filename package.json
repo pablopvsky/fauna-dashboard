@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "docker:build": "docker build -t pablopvsky/fauna-dashboard:${npm_package_version:-latest} .",
-    "docker:push": "docker push pablopvsky/fauna-dashboard:${npm_package_version:-latest}"
+    "docker:build": "docker build -t pablopvsky/fauna-dashboard:latest .",
+    "docker:push": "docker push pablopvsky/fauna-dashboard:latest"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
