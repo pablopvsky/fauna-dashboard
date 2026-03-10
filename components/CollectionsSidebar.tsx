@@ -56,7 +56,7 @@ export function CollectionsSidebar() {
       className="w-25 shrink-0 border-r border-gray-6 bg-gray-1 flex flex-col"
       aria-label="Collections"
     >
-      <div className="p-2 border-b border-gray-6 flex flex-col gap-2">
+      <div className="p-1 border-b border-gray-6 flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-gray-12">Collections</h2>
           <Button
