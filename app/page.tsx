@@ -13,6 +13,14 @@ import {
   DialogFooter,
 } from "@/components/ui/Dialog";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/Table";
+import {
   getConnections,
   addConnection,
   updateConnection,
@@ -136,7 +144,7 @@ export default function HomePage() {
           </p>
         </div>
         <Button onClick={openCreate}>
-          <PlusIcon className="icon" aria-hidden />
+          <PlusIcon className="icon mr-1" aria-hidden />
           New connection
         </Button>
       </div>
@@ -145,63 +153,126 @@ export default function HomePage() {
         <div className="flex flex-col items-center justify-center gap-4 p-8 rounded-md border border-gray-6 bg-gray-2 text-center">
           <p className="text-gray-11">No connections yet.</p>
           <Button onClick={openCreate}>
-            <PlusIcon className="icon" aria-hidden />
+            <PlusIcon className="icon mr-1" aria-hidden />
             Create a connection
           </Button>
         </div>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="list">
-          {data.connections.map((conn) => {
-            const isActive = data.activeId === conn.id;
-            return (
-              <li
-                key={conn.id}
-                className={cn(
-                  "flex flex-col gap-2 p-3 rounded-md border bg-gray-2 min-w-0",
-                  isActive ? "border-accent-7 bg-accent-2" : "border-gray-6"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2 min-w-0">
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-12 truncate">{conn.name}</p>
-                    <p className="text-xs text-gray-11 font-mono truncate" title={conn.endpoint}>
-                      {maskEndpoint(conn.endpoint)}
-                    </p>
+        <>
+          <div className="sm:hidden space-y-2" role="list">
+            {data.connections.map((conn) => {
+              const isActive = data.activeId === conn.id;
+              return (
+                <div
+                  key={conn.id}
+                  role="listitem"
+                  className={cn(
+                    "flex flex-col gap-2 p-3 rounded-md border bg-gray-2",
+                    isActive ? "border-accent-7 bg-accent-2" : "border-gray-6"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2 min-w-0">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-12 truncate">{conn.name}</p>
+                      <p className="text-xs text-gray-11 font-mono truncate" title={conn.endpoint}>
+                        {maskEndpoint(conn.endpoint)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="link" size="icon" aria-label={`Edit ${conn.name}`} onClick={() => openEdit(conn)}>
+                        <Pencil1Icon className="icon" />
+                      </Button>
+                      <Button
+                        variant="link"
+                        size="icon"
+                        aria-label={`Delete ${conn.name}`}
+                        onClick={() => handleDelete(conn.id)}
+                        className="text-red-11 hover:text-red-12"
+                      >
+                        <TrashIcon className="icon" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="link"
-                      size="icon"
-                      aria-label={`Edit ${conn.name}`}
-                      onClick={() => openEdit(conn)}
-                    >
-                      <Pencil1Icon className="icon" />
+                  {isActive ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-accent-11">
+                      <CheckIcon className="icon" aria-hidden />
+                      Active
+                    </span>
+                  ) : (
+                    <Button variant="pill" size="sm" onClick={() => handleActivate(conn.id)}>
+                      Activate
                     </Button>
-                    <Button
-                      variant="link"
-                      size="icon"
-                      aria-label={`Delete ${conn.name}`}
-                      onClick={() => handleDelete(conn.id)}
-                      className="text-red-11 hover:text-red-12"
-                    >
-                      <TrashIcon className="icon" />
-                    </Button>
-                  </div>
+                  )}
                 </div>
-                {isActive ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-accent-11">
-                    <CheckIcon className="icon" aria-hidden />
-                    Active
-                  </span>
-                ) : (
-                  <Button variant="pill" size="sm" onClick={() => handleActivate(conn.id)}>
-                    Activate
-                  </Button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+              );
+            })}
+          </div>
+          <div className="hidden sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Endpoint</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-0 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.connections.map((conn) => {
+                  const isActive = data.activeId === conn.id;
+                  return (
+                    <TableRow key={conn.id} className={cn(isActive && "bg-accent-2")}>
+                      <TableCell>
+                        <span className="font-medium text-gray-12">{conn.name}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className="font-mono text-xs text-gray-11 truncate block max-w-52"
+                          title={conn.endpoint}
+                        >
+                          {maskEndpoint(conn.endpoint)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {isActive ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-accent-11">
+                            <CheckIcon className="icon" aria-hidden />
+                            Active
+                          </span>
+                        ) : (
+                          <Button variant="pill" size="sm" onClick={() => handleActivate(conn.id)}>
+                            Activate
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="link"
+                            size="icon"
+                            aria-label={`Edit ${conn.name}`}
+                            onClick={() => openEdit(conn)}
+                          >
+                            <Pencil1Icon className="icon" />
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="icon"
+                            aria-label={`Delete ${conn.name}`}
+                            onClick={() => handleDelete(conn.id)}
+                            className="text-red-11 hover:text-red-12"
+                          >
+                            <TrashIcon className="icon" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
