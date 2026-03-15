@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +17,14 @@ import {
 } from "@radix-ui/react-icons";
 import { dashboardFetch } from "@/utils/dashboard-api";
 import { cn } from "@/utils/class-names";
+import "@uiw/react-textarea-code-editor/dist.css";
+import "@/styles/shell-editor-pink.css";
+import "@/styles/shell-editor-dark.css";
+
+const CodeEditor = dynamic(
+  () => import("@uiw/react-textarea-code-editor").then((mod) => mod.default),
+  { ssr: false }
+);
 
 type StagedStatus = "pending" | "ready" | "failed" | null;
 
@@ -265,13 +274,23 @@ export function SchemaPanel() {
           <div className="shrink-0 px-2 py-0.5 font-mono text-xs text-gray-11">
             ./{localFilename}
           </div>
-          <div className="min-h-0 flex-1 max-h-[68svh] flex flex-col">
-            <textarea
-              aria-label="Local schema content"
+          <div className="min-h-0 flex-1 max-h-[80svh] overflow-x-auto overflow-y-auto shell-query-editor--pink bg-gray-3">
+            <CodeEditor
               value={localContent}
               onChange={(e) => setLocalContent(e.target.value)}
               placeholder="Pull remote schema or paste .fsl content…"
-              className="flex-1 min-h-0 w-full resize-none border-0 bg-transparent p-2 font-mono text-sm text-gray-12 outline-none block"
+              language="go"
+              data-color-mode="light"
+              padding={13}
+              minHeight={120}
+              spellCheck={false}
+              style={{
+                fontSize: 13,
+                backgroundColor: "transparent",
+                fontFamily:
+                  "ui-monospace, SFMono-Regular, SF Mono, Consolas, Liberation Mono, Menlo, monospace",
+                minWidth: "min-content",
+              }}
             />
           </div>
         </div>
@@ -325,26 +344,43 @@ export function SchemaPanel() {
           <div className="shrink-0 px-2 py-0.5 font-mono text-xs text-gray-11">
             {primaryFile ? `./${primaryFile.name}` : "—"}
           </div>
-          <ScrollArea className="h-full max-h-[68svh] min-h-0 flex-1">
-            <div className="min-h-full p-2 font-mono text-sm text-gray-12">
+          <div className="h-full max-h-[80svh] min-h-0 flex-1 overflow-x-auto overflow-y-auto bg-gray-12 text-gray-contrast">
+            <div className="min-h-full min-h-[12rem] p-2">
               {remoteError && (
                 <p className="text-danger-contrast">
                   {remoteError instanceof Error ? remoteError.message : "Failed to load remote schema."}
                 </p>
               )}
               {!remoteError && remoteFiles.length === 0 && !isValidating && (
-                <p className="text-gray-11">Pull to load remote schema.</p>
+                <p className="text-gray-2">Pull to load remote schema.</p>
               )}
               {!remoteError && remoteContent && (
-                <pre className="whitespace-pre-wrap break-words text-inherit">{remoteContent}</pre>
+                <div className="shell-output-editor--dark bg-gray-12 min-w-max w-fit">
+                  <CodeEditor
+                    value={remoteContent}
+                    readOnly
+                    language="go"
+                    data-color-mode="dark"
+                    padding={13}
+                    minHeight={120}
+                    spellCheck={false}
+                    style={{
+                      fontSize: 13,
+                      backgroundColor: "transparent",
+                      fontFamily:
+                        "ui-monospace, SFMono-Regular, SF Mono, Consolas, Liberation Mono, Menlo, monospace",
+                      minWidth: "min-content",
+                    }}
+                  />
+                </div>
               )}
               {isValidating && (
-                <p className="text-gray-11 flex items-center gap-1">
+                <p className="text-gray-2 flex items-center gap-1">
                   <ReloadIcon className="icon animate-spin" aria-hidden /> Loading…
                 </p>
               )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </div>
     </div>

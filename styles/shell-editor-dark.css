@@ -1,0 +1,15 @@
+/* Dark theme for Shell/Schema output panel – gray-12 background, pink accents */
+.shell-output-editor--dark .w-tc-editor[data-color-mode="dark"],
+.shell-output-editor--dark.w-tc-editor[data-color-mode="dark"] {
+  --color-fg-default: var(--gray-contrast);
+  --color-canvas-subtle: var(--gray-12);
+  --color-prettylights-syntax-comment: #f9a8d4;
+  --color-prettylights-syntax-entity-tag: #f472b6;
+  --color-prettylights-syntax-entity: #e879f9;
+  --color-prettylights-syntax-sublimelinter-gutter-mark: #f472b6;
+  --color-prettylights-syntax-constant: #f9a8d4;
+  --color-prettylights-syntax-string: #f472b6;
+  --color-prettylights-syntax-keyword: #f472b6;
+  --color-prettylights-syntax-markup-bold: var(--gray-contrast);
+  --color-prettylights-syntax-string-regexp: #e879f9;
+}
