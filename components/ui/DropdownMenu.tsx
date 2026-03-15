@@ -51,7 +51,7 @@ function DropdownMenuContent({
         collisionPadding={8}
         className={cn(
           className,
-          "bg-gray-1 border border-gray-a6 rounded-sm relative shadow-md"
+          "bg-gray-1 border border-gray-a6 rounded-sm relative shadow-md z-50"
         )}
         {...props}
       />

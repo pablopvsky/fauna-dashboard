@@ -203,11 +203,10 @@
   main {
     background-color: var(--gray-1);
   }
- 
+
 }
 
 @layer components {
-
 
   @import "../styles/accordion.css";
 
@@ -222,4 +221,6 @@
   input, select, textarea {
     border: 1px solid var(--aura-input-border-color);
   }
+
+@import "../styles/sidebar.css" 
 }

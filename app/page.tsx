@@ -127,7 +127,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="p-4 max-w-4xl mx-auto">
+    <main className="p-1 mx-auto">
       <div className="flex flex-row items-center justify-between gap-4 mb-4">
         <div>
           <h1 className="h2 text-gray-12 mb-1">Connections</h1>

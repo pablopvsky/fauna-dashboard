@@ -1,7 +1,3 @@
-import {
-  SidebarProvider,
-  SidebarInset,
-} from "@/components/ui/Sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { getSidebarState } from "@/utils/cookies";
 
@@ -24,13 +20,12 @@ export async function AppLayout({
   const sidebarOpen = await getSidebarState();
 
   return (
-    <SidebarProvider defaultOpen={sidebarOpen}>
-      <AppSidebar menuItems={menuItems} title={title} />
-      <SidebarInset className="min-h-0 flex flex-col">
-        <main className="flex-1 min-h-0 overflow-auto flex flex-col p-0.5">
-          {children}
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <AppSidebar
+      menuItems={menuItems}
+      title={title}
+      defaultOpen={sidebarOpen}
+    >
+      {children}
+    </AppSidebar>
   );
 }
