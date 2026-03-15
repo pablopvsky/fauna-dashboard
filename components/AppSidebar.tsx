@@ -28,7 +28,12 @@ import {
 } from "@/components/ui/DropdownMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
-import { ImageIcon, CaretSortIcon, CheckIcon, LayersIcon } from "@radix-ui/react-icons";
+import {
+  ImageIcon,
+  CaretSortIcon,
+  CheckIcon,
+  LayersIcon,
+} from "@radix-ui/react-icons";
 import {
   getSidebarMenuIcon,
   type SidebarMenuConfig,
@@ -84,7 +89,9 @@ export function AppSidebar({
 
   const [connections, setConnections] = useState<FaunaConnection[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [health, setHealth] = useState<"idle" | "checking" | "healthy" | "unhealthy">("idle");
+  const [health, setHealth] = useState<
+    "idle" | "checking" | "healthy" | "unhealthy"
+  >("idle");
 
   const refreshConnections = useCallback(() => {
     const { connections: conns, activeId: id } = getConnections();
@@ -242,7 +249,10 @@ export function AppSidebar({
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-19">
-                  <DropdownMenuLabel className="text-gray-11"> Databases</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-gray-11">
+                    {" "}
+                    Databases
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {connections.length === 0 ? (
                     <DropdownMenuItem disabled className="text-gray-11">
@@ -330,9 +340,7 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-         
-        </SidebarFooter>
+        <SidebarFooter></SidebarFooter>
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
@@ -344,7 +352,6 @@ export function AppSidebar({
             <>
               <div className="ml-auto h-2.5 w-px bg-gray-6" />
               <Badge
-        
                 status={
                   health === "healthy"
                     ? "success"
