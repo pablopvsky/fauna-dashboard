@@ -1,4 +1,4 @@
-import { BookOpen, Brain, CogIcon, FolderOpen, Terminal } from "lucide-react";
+import { BookOpen, Brain, CogIcon, FolderOpen, Layers, Terminal } from "lucide-react";
 import type { ComponentType } from "react";
 
 export type SidebarMenuLinkItem = {
@@ -29,6 +29,7 @@ const ICON_MAP: Record<string, ComponentType<{ className?: string }>> = {
   Brain,
   FolderOpen,
   Gear: CogIcon,
+  Layers,
   Terminal,
 };
 

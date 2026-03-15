@@ -1,6 +1,7 @@
 [
   { "title": "Auth", "url": "/", "icon": "Gear" },
   { "title": "Shell", "url": "/shell", "icon": "Terminal" },
+  { "title": "Schema", "url": "/schema", "icon": "Layers" },
   { "title": "Collections", "url": "/collections", "icon": "FolderOpen" },
   { "type": "separator" },
   {
