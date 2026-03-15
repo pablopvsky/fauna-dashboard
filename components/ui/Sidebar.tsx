@@ -245,7 +245,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
           className={cn(
-            "bg-gray-2 flex h-full w-full flex-col",
+            "bg-gray-2 flex h-full w-full flex-col space-y-1",
             "group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-gray-6 group-data-[variant=floating]:shadow-sm",
             "group-data-[collapsible=icon]:p-0.5"
           )}

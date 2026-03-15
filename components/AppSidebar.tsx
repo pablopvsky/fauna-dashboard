@@ -27,7 +27,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/DropdownMenu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/Avatar";
-import { ImageIcon, CaretSortIcon, CheckIcon } from "@radix-ui/react-icons";
+import { Badge } from "@/components/ui/Badge";
+import { ImageIcon, CaretSortIcon, CheckIcon, LayersIcon } from "@radix-ui/react-icons";
 import {
   getSidebarMenuIcon,
   type SidebarMenuConfig,
@@ -36,6 +37,7 @@ import {
 import {
   getConnections,
   setActiveConnectionId,
+  getAuthHeaders,
   CONNECTION_CHANGED_EVENT,
   type FaunaConnection,
 } from "@/utils/fauna-auth-store";
@@ -82,6 +84,7 @@ export function AppSidebar({
 
   const [connections, setConnections] = useState<FaunaConnection[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [health, setHealth] = useState<"idle" | "checking" | "healthy" | "unhealthy">("idle");
 
   const refreshConnections = useCallback(() => {
     const { connections: conns, activeId: id } = getConnections();
@@ -98,6 +101,31 @@ export function AppSidebar({
 
   const activeConnection = connections.find((c) => c.id === activeId);
   const activeDatabaseLabel = activeConnection?.name ?? "No database";
+
+  const checkHealth = useCallback(async () => {
+    const headers = getAuthHeaders();
+    if (!Object.keys(headers).length) {
+      setHealth("idle");
+      return;
+    }
+    setHealth("checking");
+    try {
+      const res = await fetch("/api/health", { headers });
+      setHealth(res.ok ? "healthy" : "unhealthy");
+    } catch {
+      setHealth("unhealthy");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activeConnection) {
+      setHealth("idle");
+      return;
+    }
+    checkHealth();
+    const interval = setInterval(checkHealth, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [activeConnection?.id, checkHealth]);
 
   function handleSelectDatabase(id: string) {
     setActiveConnectionId(id);
@@ -213,8 +241,8 @@ export function AppSidebar({
                     <CaretSortIcon className="icon ml-auto group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuLabel>Databases</DropdownMenuLabel>
+                <DropdownMenuContent className="w-19">
+                  <DropdownMenuLabel className="text-gray-11"> Databases</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {connections.length === 0 ? (
                     <DropdownMenuItem disabled className="text-gray-11">
@@ -245,7 +273,7 @@ export function AppSidebar({
             <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
               Menu
             </SidebarGroupLabel>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-0.5">
               {menuItems.map((item, i) => {
                 if (item.type === "separator") {
                   return (
@@ -303,47 +331,60 @@ export function AppSidebar({
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg" tooltip="User menu">
-                    <Avatar className="size-2.5 rounded-lg group-data-[collapsible=icon]:size-3">
-                      <AvatarImage src="/avatars/shadcn.jpg" alt="User" />
-                      <AvatarFallback>SC</AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-medium">User</span>
-                      <span className="truncate text-xs text-gray-11">
-                        Account
-                      </span>
-                    </div>
-                    <CaretSortIcon className="icon ml-auto group-data-[collapsible=icon]:hidden" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-(--sidebar-width)"
-                >
-                  <DropdownMenuLabel>My account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Billing</DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Log out</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
+         
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-4 shrink-0 items-center gap-2 border-b border-gray-6 px-2">
+        <header className="flex h-4 shrink-0 items-center gap-2 border-b border-gray-6 px-1">
           <SidebarTrigger />
           <div className="h-2.5 w-px bg-gray-6" />
           <span className="text-sm text-gray-11">{activeTitle}</span>
+          {activeConnection && (
+            <>
+              <div className="ml-auto h-2.5 w-px bg-gray-6" />
+              <Badge
+        
+                status={
+                  health === "healthy"
+                    ? "success"
+                    : health === "unhealthy"
+                      ? "danger"
+                      : undefined
+                }
+                className="gap-1"
+                role="status"
+                aria-live="polite"
+                aria-label={
+                  health === "checking"
+                    ? "Checking database health"
+                    : health === "healthy"
+                      ? "Database healthy"
+                      : health === "unhealthy"
+                        ? "Database unhealthy"
+                        : "Health status"
+                }
+              >
+                <span
+                  className={`size-0.5 shrink-0 rounded-full ${
+                    health === "healthy"
+                      ? "bg-success-contrast"
+                      : health === "unhealthy"
+                        ? "bg-danger-contrast"
+                        : "bg-gray-8"
+                  }`}
+                  aria-hidden
+                />
+                {health === "checking"
+                  ? "Checking…"
+                  : health === "healthy"
+                    ? "Healthy"
+                    : health === "unhealthy"
+                      ? "Unhealthy"
+                      : "—"}
+              </Badge>
+            </>
+          )}
         </header>
         <div className="flex-1 min-h-0 flex flex-col overflow-auto p-0.5">
           {children}

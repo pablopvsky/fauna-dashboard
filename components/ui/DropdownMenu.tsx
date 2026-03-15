@@ -74,7 +74,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       className={cn(
         className,
-        "p-0.5 px-2 hover:bg-accent-3 flex relative cursor-pointer justify-between"
+        "p-0.5 px-2 hover:bg-accent-3 flex relative cursor-pointer"
       )}
       {...props}
     />
@@ -149,7 +149,7 @@ function DropdownMenuLabel({
   return (
     <DropdownMenuRadix.Label
       data-slot="dropdown-menu-label"
-      className={cn(className, "p-0.5 px-2 text-gray-12")}
+      className={cn("p-0.5 px-2 text-gray-12", className)}
       {...props}
     />
   );

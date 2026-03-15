@@ -130,7 +130,7 @@ export default function HomePage() {
     <main className="p-1 mx-auto">
       <div className="flex flex-row items-center justify-between gap-4 mb-4">
         <div>
-          <h1 className="h2 text-gray-12 mb-1">Connections</h1>
+          <h1 className="h2 text-gray-12 mb-1">Welcome back</h1>
           <p className="text-sm text-gray-11">
             Manage Fauna connections. The active connection is used for Nodes, Collections, and Shell.
           </p>
