@@ -251,9 +251,9 @@ export function SchemaPanel() {
       )}
 
       {/* Split: Local | [Pull/Push] | Remote */}
-      <div className="flex min-h-0 flex-1 gap-0 border-t border-gray-6">
+      <div className="flex min-h-0 flex-1 gap-0 border-t border-gray-6" style={{ minHeight: "24rem" }}>
         {/* Left: Local Schema */}
-        <div className="flex min-w-0 flex-1 flex-col border-r border-gray-6">
+        <div className="flex min-w-0 flex-1 flex-col border-r border-gray-6 min-h-0">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-6 px-2 py-1.5">
             <span className="text-sm font-medium text-gray-12">Local Schema</span>
             {isDirty && (
@@ -265,17 +265,15 @@ export function SchemaPanel() {
           <div className="shrink-0 px-2 py-0.5 font-mono text-xs text-gray-11">
             ./{localFilename}
           </div>
-          <ScrollArea className="max-h-[80svh] min-h-0 flex-1">
-            <div className="h-full w-full min-w-full" style={{ display: "table" }}>
-              <textarea
-                aria-label="Local schema content"
-                value={localContent}
-                onChange={(e) => setLocalContent(e.target.value)}
-                placeholder="Pull remote schema or paste .fsl content…"
-                className="h-full min-h-full w-full resize-none border-0 bg-transparent p-2 font-mono text-sm text-gray-12 outline-none"
-              />
-            </div>
-          </ScrollArea>
+          <div className="min-h-0 flex-1 max-h-[68svh] flex flex-col">
+            <textarea
+              aria-label="Local schema content"
+              value={localContent}
+              onChange={(e) => setLocalContent(e.target.value)}
+              placeholder="Pull remote schema or paste .fsl content…"
+              className="flex-1 min-h-0 w-full resize-none border-0 bg-transparent p-2 font-mono text-sm text-gray-12 outline-none block"
+            />
+          </div>
         </div>
 
         {/* Center: Pull / Push buttons */}
@@ -317,7 +315,7 @@ export function SchemaPanel() {
         </div>
 
         {/* Right: Remote Schema */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col min-h-0">
           <div className="flex shrink-0 items-center gap-2 border-b border-gray-6 px-2 py-1.5">
             <span className="text-sm font-medium text-gray-12">Remote Schema</span>
             {!remoteError && remoteFiles.length > 0 && (
@@ -327,8 +325,8 @@ export function SchemaPanel() {
           <div className="shrink-0 px-2 py-0.5 font-mono text-xs text-gray-11">
             {primaryFile ? `./${primaryFile.name}` : "—"}
           </div>
-          <ScrollArea className="max-h-[60svh] min-h-0 flex-1">
-            <div className="p-2 font-mono text-sm text-gray-12" style={{ minHeight: "20rem" }}>
+          <ScrollArea className="h-full max-h-[68svh] min-h-0 flex-1">
+            <div className="min-h-full p-2 font-mono text-sm text-gray-12">
               {remoteError && (
                 <p className="text-danger-contrast">
                   {remoteError instanceof Error ? remoteError.message : "Failed to load remote schema."}
@@ -349,13 +347,6 @@ export function SchemaPanel() {
           </ScrollArea>
         </div>
       </div>
-
-      {/* Footer: copy from remote into local */}
-      <footer className="shrink-0 border-t border-gray-6 px-2 py-1.5">
-        <Button variant="link" size="sm" onClick={syncLocalFromRemote} disabled={!primaryFile}>
-          Copy remote into local
-        </Button>
-      </footer>
     </div>
   );
 }
