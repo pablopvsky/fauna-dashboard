@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
-import { Eraser, Download, FolderOpen, Play, Copy, Check } from "lucide-react";
+import { Play, Copy, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { dashboardFetch } from "@/utils/dashboard-api";
@@ -161,8 +161,15 @@ function OutputWithLineNumbers({ text }: { text: string | undefined }) {
   );
 }
 
+export type ShellPanelActions = {
+  clear: () => void;
+  download: () => void;
+  openFile: () => void;
+};
+
 type ShellPanelProps = {
   injectQueryRef?: React.MutableRefObject<((query: string) => void) | null>;
+  actionsRef?: React.MutableRefObject<ShellPanelActions | null>;
 };
 
 type CollectionsApiJson = {
@@ -200,7 +207,7 @@ async function fetchShellSchemaCompletions(): Promise<{
 
 const DEFAULT_SSR_TAB_ID = "shell-tab-default";
 
-export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
+export function ShellPanel({ injectQueryRef, actionsRef }: ShellPanelProps) {
   const [tabs, setTabs] = useState<ShellTabState[]>(() => [
     {
       id: DEFAULT_SSR_TAB_ID,
@@ -223,6 +230,9 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
 
   const activeTabIdRef = useRef(activeTabId);
   activeTabIdRef.current = activeTabId;
+
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
 
   const activeTab =
     tabs.find((t) => t.id === activeTabId) ?? tabs[0];
@@ -373,16 +383,8 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
     };
   }, [injectQueryRef]);
 
-  useEffect(() => {
-    if (output.length === 0) return;
-    const t = requestAnimationFrame(() => {
-      outputEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    });
-    return () => cancelAnimationFrame(t);
-  }, [output]);
-
-  const handleClear = () => {
-    const id = activeTabId;
+  const handleClear = useCallback(() => {
+    const id = activeTabIdRef.current;
     setTabs((prev) =>
       prev.map((t) =>
         t.id === id
@@ -390,10 +392,13 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
           : t,
       ),
     );
-  };
+  }, []);
 
-  const handleDownload = () => {
-    const blob = new Blob([JSON.stringify({ results: output }, null, 2)], {
+  const handleDownload = useCallback(() => {
+    const id = activeTabIdRef.current;
+    const tab = tabsRef.current.find((t) => t.id === id);
+    const results = tab?.output ?? [];
+    const blob = new Blob([JSON.stringify({ results }, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -402,11 +407,31 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
     a.download = "fauna-shell-results.json";
     a.click();
     URL.revokeObjectURL(url);
-  };
+  }, []);
 
-  const handleOpenFile = () => {
+  const handleOpenFile = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!actionsRef) return;
+    actionsRef.current = {
+      clear: handleClear,
+      download: handleDownload,
+      openFile: handleOpenFile,
+    };
+    return () => {
+      actionsRef.current = null;
+    };
+  }, [actionsRef, handleClear, handleDownload, handleOpenFile]);
+
+  useEffect(() => {
+    if (output.length === 0) return;
+    const t = requestAnimationFrame(() => {
+      outputEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(t);
+  }, [output]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -550,37 +575,14 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-gray-1 gap-0.5 p-0.5">
-      <header className="flex w-full min-w-0 max-w-full shrink-0 flex-wrap items-center justify-between gap-2 px-2 pb-1">
-        <h1 className="shrink-0 text-sm font-semibold text-gray-12">Shell</h1>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
-          <Button size="sm" variant="pill" onClick={handleClear}>
-            <span className="flex items-center gap-1">
-              <Eraser className="icon shrink-0" aria-hidden />
-              Clear
-            </span>
-          </Button>
-          <Button size="sm" variant="pill" onClick={handleDownload}>
-            <span className="flex items-center gap-1">
-              <Download className="icon shrink-0" aria-hidden />
-              Download
-            </span>
-          </Button>
-          <Button size="sm" variant="pill" onClick={handleOpenFile}>
-            <span className="flex items-center gap-1">
-              <FolderOpen className="icon shrink-0" aria-hidden />
-              Open file
-            </span>
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".fql,.txt,text/*"
-            className="hidden"
-            aria-hidden
-            onChange={handleFileChange}
-          />
-        </div>
-      </header>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".fql,.txt,text/*"
+        className="hidden"
+        aria-hidden
+        onChange={handleFileChange}
+      />
 
       <div className="flex min-w-0 shrink-0 items-stretch gap-0 border-b border-gray-6">
         <Tabs
@@ -593,7 +595,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
               <TabsTrigger
                 key={t.id}
                 value={t.id}
-                className="text-gray-10 data-[state=active]:text-gray-11 hover:text-gray-11 hover:bg-gray-a2 inline-flex h-[calc(100%+1px)] w-12 min-w-12 max-w-12 shrink-0 flex-none cursor-pointer items-center gap-0.5 border-b-transparent px-1 py-1 data-[state=active]:border-b-2 data-[state=active]:border-b-gray-a6"
+                className="w-12 min-w-12 max-w-12"
               >
                 {renamingTabId === t.id ? (
                   <input

@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MutableRefObject,
+} from "react";
 import useSWR from "swr";
-import { History, FolderTree } from "lucide-react";
+import { History, FolderTree, Eraser, Download, FolderOpen } from "lucide-react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/Tooltip";
 import Button from "@/components/ui/Button";
@@ -20,6 +26,7 @@ import {
   type RemoteSchemaData,
 } from "@/utils/remote-schema-fetch";
 import { parseFslCollections } from "@/utils/parse-fsl-collections";
+import type { ShellPanelActions } from "@/components/ShellPanel";
 
 const SHELL_HISTORY_STORAGE_KEY = "fauna-shell-query-history";
 
@@ -27,9 +34,13 @@ type SidePanelId = "history" | "explorer";
 
 type ShellSidebarProps = {
   onSelectHistoryEntry?: (query: string) => void;
+  shellActionsRef?: MutableRefObject<ShellPanelActions | null>;
 };
 
-export function ShellSidebar({ onSelectHistoryEntry }: ShellSidebarProps) {
+export function ShellSidebar({
+  onSelectHistoryEntry,
+  shellActionsRef,
+}: ShellSidebarProps) {
   const [sidePanel, setSidePanel] = useState<SidePanelId | null>(null);
   const [historyItems, setHistoryItems] = useState<string[]>([]);
 
@@ -117,6 +128,53 @@ export function ShellSidebar({ onSelectHistoryEntry }: ShellSidebarProps) {
             <TooltipContent side="right">Schema explorer</TooltipContent>
           </Tooltip>
         </nav>
+        <div className="mt-auto flex shrink-0 flex-col items-center gap-1 border-t border-gray-6 px-1 py-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="pill"
+                size="icon"
+                className="size-3"
+                type="button"
+                aria-label="Clear editor and results"
+                onClick={() => shellActionsRef?.current?.clear()}
+              >
+                <Eraser className="icon" aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Clear</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="pill"
+                size="icon"
+                className="size-3"
+                type="button"
+                aria-label="Download results as JSON"
+                onClick={() => shellActionsRef?.current?.download()}
+              >
+                <Download className="icon" aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Download</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="pill"
+                size="icon"
+                className="size-3"
+                type="button"
+                aria-label="Open query file"
+                onClick={() => shellActionsRef?.current?.openFile()}
+              >
+                <FolderOpen className="icon" aria-hidden />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Open file</TooltipContent>
+          </Tooltip>
+        </div>
       </aside>
 
       {sidePanel === "history" && (
