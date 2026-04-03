@@ -343,7 +343,7 @@ export function AppSidebar({
         <SidebarFooter></SidebarFooter>
         <SidebarRail />
       </Sidebar>
-      <SidebarInset>
+      <SidebarInset className="min-h-0">
         <header className="flex h-4 shrink-0 items-center gap-2 border-b border-gray-6 px-1">
           <SidebarTrigger />
           <div className="h-2.5 w-px bg-gray-6" />
@@ -393,7 +393,7 @@ export function AppSidebar({
             </>
           )}
         </header>
-        <div className="flex-1 min-h-0 flex flex-col overflow-auto p-0.5">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-0.5">
           {children}
         </div>
       </SidebarInset>

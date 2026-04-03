@@ -26,42 +26,6 @@ export function getSchemaBaseUrl(endpoint: string): string {
   }
 }
 
-export type StagedSchemaStatus = "pending" | "ready" | "failed" | null;
-
-/**
- * GET staged schema status.
- * Fauna: GET /schema/1/staged/status
- * Returns null when there is no staged schema.
- */
-export async function getStagedSchemaStatus(
-  baseUrl: string,
-  secret: string
-): Promise<{ status: StagedSchemaStatus; raw?: unknown }> {
-  const res = await fetch(`${baseUrl}/staged/status`, {
-    method: "GET",
-    headers: { Authorization: `Bearer ${secret}` },
-  });
-  if (res.status === 404 || res.status === 204) {
-    return { status: null };
-  }
-  if (!res.ok) {
-    const text = await res.text();
-    let raw: unknown;
-    try {
-      raw = text ? JSON.parse(text) : undefined;
-    } catch {
-      raw = text;
-    }
-    throw new Error(text || res.statusText);
-  }
-  const data = (await res.json()) as { status?: string };
-  const status = data.status as StagedSchemaStatus | undefined;
-  return {
-    status: status === "pending" || status === "ready" || status === "failed" ? status : null,
-    raw: data,
-  };
-}
-
 /**
  * GET schema file names (list of .fsl filenames).
  */
@@ -118,74 +82,4 @@ export async function getSchemaFile(
     // not JSON, return as plain text
   }
   return text;
-}
-
-/**
- * POST update schema files (push). staged=true by default.
- */
-export async function updateSchemaFiles(
-  baseUrl: string,
-  secret: string,
-  files: Record<string, string>,
-  options?: { staged?: boolean }
-): Promise<{ ok: boolean; raw?: unknown }> {
-  const staged = options?.staged !== false;
-  const url = `${baseUrl}/update?staged=${staged}`;
-  const form = new FormData();
-  for (const [name, content] of Object.entries(files)) {
-    form.append(name, new Blob([content], { type: "text/plain" }), name);
-  }
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${secret}` },
-    body: form,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || res.statusText);
-  }
-  let raw: unknown;
-  const text = await res.text();
-  try {
-    raw = text ? JSON.parse(text) : undefined;
-  } catch {
-    raw = text;
-  }
-  return { ok: true, raw };
-}
-
-/**
- * POST commit staged schema. Fauna: POST /schema/1/staged/commit
- */
-export async function commitStagedSchema(
-  baseUrl: string,
-  secret: string
-): Promise<{ ok: boolean }> {
-  const res = await fetch(`${baseUrl}/staged/commit`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${secret}` },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || res.statusText);
-  }
-  return { ok: true };
-}
-
-/**
- * POST abandon staged schema. Fauna: POST /schema/1/staged/abandon
- */
-export async function abandonStagedSchema(
-  baseUrl: string,
-  secret: string
-): Promise<{ ok: boolean }> {
-  const res = await fetch(`${baseUrl}/staged/abandon`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${secret}` },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || res.statusText);
-  }
-  return { ok: true };
 }

@@ -45,7 +45,10 @@ function AccordionTrigger({
         {...props}
       >
         {children}
-        <ChevronDownIcon className="group-data-[state=open]:rotate-180 transition duration-300" />
+        <ChevronDownIcon
+          className="icon shrink-0 transition duration-300 group-data-[state=open]:rotate-180"
+          aria-hidden
+        />
       </AccordionRadix.Trigger>
     </AccordionRadix.Header>
   );
