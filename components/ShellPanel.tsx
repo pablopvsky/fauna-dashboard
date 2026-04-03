@@ -1,22 +1,28 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Eraser, Download, FolderOpen, Play, Copy, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { ScrollArea } from "@/components/ui/ScrollArea";
 import { dashboardFetch } from "@/utils/dashboard-api";
-import "@uiw/react-textarea-code-editor/dist.css";
-import "@/styles/shell-editor-pink.css";
+
+const ShellQueryEditor = dynamic(
+  () =>
+    import("@/components/ShellQueryEditor").then((m) => m.ShellQueryEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="min-h-[120px] rounded-[var(--aura-input-radius)] border border-gray-6 bg-gray-3"
+        aria-hidden
+      />
+    ),
+  },
+);
 
 const CODE_EDITOR_STORAGE_KEY = "fauna-shell-query-history";
 const MAX_QUERY_HISTORY = 100;
-
-const CodeEditor = dynamic(
-  () =>
-    import("@uiw/react-textarea-code-editor").then((mod) => mod.default),
-  { ssr: false }
-);
 
 type OutputEntry = {
   id: string;
@@ -53,6 +59,18 @@ type ShellPanelProps = {
   injectQueryRef?: React.MutableRefObject<((query: string) => void) | null>;
 };
 
+async function fetchCollectionNames(): Promise<string[]> {
+  const res = await dashboardFetch("/api/collections");
+  const json = (await res.json()) as {
+    success?: boolean;
+    names?: string[];
+  };
+  if (!res.ok || json.success !== true || !Array.isArray(json.names)) {
+    return [];
+  }
+  return json.names;
+}
+
 export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   const [queryHistory, setQueryHistory] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
@@ -66,39 +84,49 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   });
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [currentDraft, setCurrentDraft] = useState("");
-  const displayValue = historyIndex >= 0 && queryHistory.length > 0
-    ? queryHistory[historyIndex]
-    : currentDraft;
+  const displayValue =
+    historyIndex >= 0 && queryHistory.length > 0
+      ? queryHistory[historyIndex]
+      : currentDraft;
 
+  const [collectionNames, setCollectionNames] = useState<string[]>([]);
   const [output, setOutput] = useState<OutputEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const outputEndRef = useRef<HTMLDivElement>(null);
 
+  const refreshCollectionNames = useCallback(() => {
+    void fetchCollectionNames().then(setCollectionNames);
+  }, []);
+
+  useEffect(() => {
+    refreshCollectionNames();
+  }, [refreshCollectionNames]);
+
   const saveHistory = (next: string[]) => {
     setQueryHistory(next);
     try {
-      window.localStorage.setItem(CODE_EDITOR_STORAGE_KEY, JSON.stringify(next));
+      window.localStorage.setItem(
+        CODE_EDITOR_STORAGE_KEY,
+        JSON.stringify(next),
+      );
     } catch {
       // ignore
     }
   };
 
-  const handleHistoryKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const onHistoryUp = useCallback(() => {
     if (queryHistory.length === 0) return;
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHistoryIndex((i) =>
-        i <= 0 ? queryHistory.length - 1 : i - 1
-      );
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHistoryIndex((i) =>
-        i < 0 || i >= queryHistory.length - 1 ? -1 : i + 1
-      );
-    }
-  };
+    setHistoryIndex((i) => (i <= 0 ? queryHistory.length - 1 : i - 1));
+  }, [queryHistory]);
+
+  const onHistoryDown = useCallback(() => {
+    if (queryHistory.length === 0) return;
+    setHistoryIndex((i) =>
+      i < 0 || i >= queryHistory.length - 1 ? -1 : i + 1,
+    );
+  }, [queryHistory]);
 
   const copyOutput = (item: OutputEntry) => {
     const text = item.error
@@ -121,7 +149,6 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
     };
   }, [injectQueryRef]);
 
-  // Scroll output to bottom whenever a new result is added or updated
   useEffect(() => {
     if (output.length === 0) return;
     const t = requestAnimationFrame(() => {
@@ -137,10 +164,9 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   };
 
   const handleDownload = () => {
-    const blob = new Blob(
-      [JSON.stringify({ results: output }, null, 2)],
-      { type: "application/json" }
-    );
+    const blob = new Blob([JSON.stringify({ results: output }, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -191,7 +217,12 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         body: JSON.stringify({ query }),
       });
       const text = await res.text();
-      let json: { success?: boolean; data?: unknown; error?: string | { message?: string }; code?: string };
+      let json: {
+        success?: boolean;
+        data?: unknown;
+        error?: string | { message?: string };
+        code?: string;
+      };
       try {
         json = text ? JSON.parse(text) : {};
       } catch {
@@ -199,17 +230,22 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         setOutput((prev) =>
           prev.map((item) =>
             item.id === entry.id
-              ? { ...item, error: `Server returned non-JSON (${res.status}). Check connection and auth. ${preview}${text.length > 150 ? "…" : ""}` }
-              : item
-          )
+              ? {
+                  ...item,
+                  error: `Server returned non-JSON (${res.status}). Check connection and auth. ${preview}${text.length > 150 ? "…" : ""}`,
+                }
+              : item,
+          ),
         );
         return;
       }
       const errMsg =
         json.success === false
-          ? (typeof json.error === "string" ? json.error : (json.error as { message?: string })?.message ?? "Query failed")
+          ? typeof json.error === "string"
+            ? json.error
+            : ((json.error as { message?: string })?.message ?? "Query failed")
           : (json as { error?: { message?: string } }).error?.message;
-      const result = errMsg ? undefined : ("data" in json ? json.data : undefined);
+      const result = errMsg ? undefined : "data" in json ? json.data : undefined;
 
       setOutput((prev) =>
         prev.map((item) =>
@@ -220,15 +256,19 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
                 error: errMsg,
                 code: json.code,
               }
-            : item
-        )
+            : item,
+        ),
       );
+
+      if (!errMsg) {
+        refreshCollectionNames();
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Network error";
       setOutput((prev) =>
         prev.map((item) =>
-          item.id === entry.id ? { ...item, error: message } : item
-        )
+          item.id === entry.id ? { ...item, error: message } : item,
+        ),
       );
     } finally {
       setIsRunning(false);
@@ -237,7 +277,6 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-gray-1 gap-0.5 p-0.5">
-      {/* Header */}
       <header className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-6 px-2 pb-1">
         <h1 className="shrink-0 text-sm font-semibold text-gray-12">Shell</h1>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
@@ -270,14 +309,15 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         </div>
       </header>
 
-      {/* Output - fills available height, always visible */}
       <ScrollArea
         scrollbarMode="both"
         className="min-h-0 min-w-0 max-w-full flex-1 bg-gray-12 text-gray-contrast"
       >
         <div className="min-h-full min-h-[12rem] w-max min-w-full space-y-2 p-2">
           {output.length === 0 && (
-            <p className="text-sm text-gray-2">Run a query to see results here.</p>
+            <p className="text-sm text-gray-2">
+              Run a query to see results here.
+            </p>
           )}
           {output.map((item) => (
             <div key={item.id} className="relative">
@@ -287,7 +327,9 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
                   variant="fill"
                   className="size-2 p-0"
                   onClick={() => copyOutput(item)}
-                  aria-label={copiedId === item.id ? "Copied" : "Copy to clipboard"}
+                  aria-label={
+                    copiedId === item.id ? "Copied" : "Copy to clipboard"
+                  }
                   title="Copy to clipboard"
                 >
                   {copiedId === item.id ? (
@@ -298,8 +340,13 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
                 </Button>
               </div>
               {item.query && (
-                <div className="mb-1 max-w-full pr-8 truncate text-gray-8" title={item.query}>
-                  {item.query.length > 80 ? `${item.query.slice(0, 80)}...` : item.query}
+                <div
+                  className="mb-1 max-w-full pr-8 truncate text-gray-8"
+                  title={item.query}
+                >
+                  {item.query.length > 80
+                    ? `${item.query.slice(0, 80)}...`
+                    : item.query}
                 </div>
               )}
               <div className={item.query ? "min-w-0" : "min-w-0 pt-6"}>
@@ -321,31 +368,23 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         </div>
       </ScrollArea>
 
-
-      {/* Query + Run */}
       <div className="flex min-w-0 max-w-full shrink-0 flex-col gap-1 pt-0.5">
-        <div className="shell-query-editor--pink min-w-0 max-w-full overflow-x-auto bg-gray-3">
-          <CodeEditor
+        <div className="min-w-0 max-w-full overflow-x-auto">
+          <ShellQueryEditor
             value={displayValue}
-            onChange={(e) => {
-              setCurrentDraft(e.target.value);
+            onChange={(v) => {
+              setCurrentDraft(v);
               setHistoryIndex(-1);
             }}
-            onKeyDown={handleHistoryKeyDown}
-            placeholder="Write your FQL query here... (↑↓ history)"
-            language="ts"
-            data-color-mode="light"
-            padding={13}
-            minHeight={80}
-            spellCheck={false}
-            style={{
-              fontSize: 13,
-              backgroundColor: "transparent",
-              fontFamily:
-                "ui-monospace, SFMono-Regular, SF Mono, Consolas, Liberation Mono, Menlo, monospace",
-            }}
+            collectionNames={collectionNames}
+            historyNavigationActive={queryHistory.length > 0}
+            onHistoryUp={onHistoryUp}
+            onHistoryDown={onHistoryDown}
           />
         </div>
+        <p className="text-xs text-gray-11 px-0.5">
+          Ctrl+Space suggestions · ↑↓ when history exists
+        </p>
         <div>
           <Button
             onClick={handleRun}

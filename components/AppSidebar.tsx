@@ -346,7 +346,6 @@ export function AppSidebar({
       <SidebarInset className="min-h-0">
         <header className="flex h-4 shrink-0 items-center gap-2 border-b border-gray-6 px-1">
           <SidebarTrigger />
-          <div className="h-2.5 w-px bg-gray-6" />
           <span className="text-sm text-gray-11">{activeTitle}</span>
           {activeConnection && (
             <>
