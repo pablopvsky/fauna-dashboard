@@ -136,25 +136,51 @@ export function ShellSidebar({ onSelectHistoryEntry }: ShellSidebarProps) {
               <Cross2Icon className="icon" aria-hidden />
             </Button>
           </header>
-          <ScrollArea className="min-h-0 flex-1">
-            <ul className="list-none space-y-0.5 p-2">
+          <ScrollArea scrollbarMode="both" className="min-h-0 min-w-0 flex-1">
+            <ul className="list-none p-0">
               {historyItems.length === 0 ? (
-                <li className="px-2 py-1.5 text-sm text-gray-11">
+                <li className="border-b border-gray-6 px-2 py-1.5 text-sm text-gray-11">
                   No queries in history
                 </li>
               ) : (
                 historyItems.map((query, i) => (
-                  <li key={`${i}-${query.slice(0, 20)}`}>
+                  <li
+                    key={`${i}-${query.slice(0, 20)}`}
+                    className="border-b border-gray-6 last:border-b-0"
+                  >
                     <button
                       type="button"
-                      className="max-w-full w-full truncate rounded-sm px-2 py-1.5 text-left font-mono text-sm text-gray-12 hover:bg-gray-3"
+                      className="max-w-full w-full min-w-0 rounded-none px-2 py-1.5 text-left font-mono text-sm text-gray-12 hover:bg-gray-3 focus-visible:bg-gray-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-8 focus-visible:ring-inset"
                       title={query}
                       onClick={() => {
                         onSelectHistoryEntry?.(query);
                         closePanel();
                       }}
+                      onKeyDown={(e) => {
+                        const el = e.currentTarget.querySelector(
+                          "[data-history-scroll]",
+                        ) as HTMLElement | null;
+                        if (
+                          !el ||
+                          el.scrollWidth <= el.clientWidth + 1
+                        ) {
+                          return;
+                        }
+                        if (e.key === "ArrowLeft") {
+                          e.preventDefault();
+                          el.scrollBy({ left: -48, behavior: "smooth" });
+                        } else if (e.key === "ArrowRight") {
+                          e.preventDefault();
+                          el.scrollBy({ left: 48, behavior: "smooth" });
+                        }
+                      }}
                     >
-                      {query.length > 60 ? `${query.slice(0, 60)}…` : query}
+                      <span
+                        data-history-scroll
+                        className="block max-w-full min-w-0 overflow-x-auto whitespace-pre [scrollbar-width:thin]"
+                      >
+                        {query}
+                      </span>
                     </button>
                   </li>
                 ))
@@ -234,7 +260,7 @@ export function ShellSidebar({ onSelectHistoryEntry }: ShellSidebarProps) {
                     .
                   </p>
                 ) : (
-                  <Accordion type="multiple" className="w-full space-y-2">
+                  <Accordion type="multiple" className="w-full space-y-1">
                     {collections.map((c, index) => (
                       <AccordionItem
                         key={c.name}

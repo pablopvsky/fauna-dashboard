@@ -2,8 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PlusIcon, TrashIcon } from "@radix-ui/react-icons";
 import { Eraser, Download, FolderOpen, Play, Copy, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { dashboardFetch } from "@/utils/dashboard-api";
 
 const ShellQueryEditor = dynamic(
@@ -21,6 +23,7 @@ const ShellQueryEditor = dynamic(
 );
 
 const CODE_EDITOR_STORAGE_KEY = "fauna-shell-query-history";
+const SHELL_TABS_STORAGE_KEY = "fauna-shell-query-tabs-v1";
 const MAX_QUERY_HISTORY = 100;
 
 type OutputEntry = {
@@ -31,6 +34,108 @@ type OutputEntry = {
   code?: string;
   timestamp: number;
 };
+
+type ShellTabState = {
+  id: string;
+  title: string;
+  draft: string;
+  historyIndex: number;
+  queryHistory: string[];
+  output: OutputEntry[];
+};
+
+function defaultTabTitle(index1Based: number) {
+  return `Query ${index1Based}`;
+}
+
+function createEmptyTab(index1Based: number): ShellTabState {
+  return {
+    id: crypto.randomUUID(),
+    title: defaultTabTitle(index1Based),
+    draft: "",
+    historyIndex: -1,
+    queryHistory: [],
+    output: [],
+  };
+}
+
+type PersistedShellTabs = {
+  activeTabId: string;
+  tabs: { id: string; title?: string; draft: string; queryHistory: string[] }[];
+};
+
+function loadInitialTabs(): { tabs: ShellTabState[]; activeTabId: string } {
+  if (typeof window === "undefined") {
+    const t = createEmptyTab(1);
+    return { tabs: [t], activeTabId: t.id };
+  }
+  try {
+    const raw = window.localStorage.getItem(SHELL_TABS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as PersistedShellTabs;
+      if (
+        parsed &&
+        typeof parsed.activeTabId === "string" &&
+        Array.isArray(parsed.tabs) &&
+        parsed.tabs.length > 0
+      ) {
+        const tabs: ShellTabState[] = parsed.tabs.map((row, i) => ({
+          id: typeof row.id === "string" ? row.id : crypto.randomUUID(),
+          title:
+            typeof row.title === "string" && row.title.trim().length > 0
+              ? row.title.trim()
+              : defaultTabTitle(i + 1),
+          draft: typeof row.draft === "string" ? row.draft : "",
+          historyIndex: -1,
+          queryHistory: Array.isArray(row.queryHistory) ? row.queryHistory : [],
+          output: [],
+        }));
+        const active =
+          tabs.some((t) => t.id === parsed.activeTabId) && parsed.activeTabId
+            ? parsed.activeTabId
+            : tabs[0].id;
+        return { tabs, activeTabId: active };
+      }
+    }
+  } catch {
+    // fall through
+  }
+  let migratedHistory: string[] = [];
+  try {
+    const legacy = window.localStorage.getItem(CODE_EDITOR_STORAGE_KEY);
+    const parsed = legacy ? (JSON.parse(legacy) as unknown) : [];
+    if (Array.isArray(parsed) && parsed.every((x) => typeof x === "string")) {
+      migratedHistory = parsed;
+    }
+  } catch {
+    // ignore
+  }
+  const t = createEmptyTab(1);
+  if (migratedHistory.length > 0) {
+    t.queryHistory = migratedHistory;
+  }
+  return { tabs: [t], activeTabId: t.id };
+}
+
+function persistTabs(tabs: ShellTabState[], activeTabId: string) {
+  try {
+    const payload: PersistedShellTabs = {
+      activeTabId,
+      tabs: tabs.map((t) => ({
+        id: t.id,
+        title: t.title,
+        draft: t.draft,
+        queryHistory: t.queryHistory,
+      })),
+    };
+    window.localStorage.setItem(
+      SHELL_TABS_STORAGE_KEY,
+      JSON.stringify(payload),
+    );
+  } catch {
+    // ignore
+  }
+}
 
 function OutputWithLineNumbers({ text }: { text: string | undefined }) {
   const lines = (text ?? "").split("\n");
@@ -93,19 +198,38 @@ async function fetchShellSchemaCompletions(): Promise<{
   return { names: json.names, collectionIndexes };
 }
 
+const DEFAULT_SSR_TAB_ID = "shell-tab-default";
+
 export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
-  const [queryHistory, setQueryHistory] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = window.localStorage.getItem(CODE_EDITOR_STORAGE_KEY);
-      const parsed = raw ? (JSON.parse(raw) as string[]) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  const [currentDraft, setCurrentDraft] = useState("");
+  const [tabs, setTabs] = useState<ShellTabState[]>(() => [
+    {
+      id: DEFAULT_SSR_TAB_ID,
+      title: defaultTabTitle(1),
+      draft: "",
+      historyIndex: -1,
+      queryHistory: [],
+      output: [],
+    },
+  ]);
+  const [activeTabId, setActiveTabId] = useState(DEFAULT_SSR_TAB_ID);
+  const [hasRestoredTabs, setHasRestoredTabs] = useState(false);
+
+  useEffect(() => {
+    const { tabs: nextTabs, activeTabId: nextActive } = loadInitialTabs();
+    setTabs(nextTabs);
+    setActiveTabId(nextActive);
+    setHasRestoredTabs(true);
+  }, []);
+
+  const activeTabIdRef = useRef(activeTabId);
+  activeTabIdRef.current = activeTabId;
+
+  const activeTab =
+    tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+  const queryHistory = activeTab?.queryHistory ?? [];
+  const historyIndex = activeTab?.historyIndex ?? -1;
+  const currentDraft = activeTab?.draft ?? "";
+  const output = activeTab?.output ?? [];
   const displayValue =
     historyIndex >= 0 && queryHistory.length > 0
       ? queryHistory[historyIndex]
@@ -115,7 +239,6 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   const [collectionIndexes, setCollectionIndexes] = useState<
     { name: string; collectionName: string }[]
   >([]);
-  const [output, setOutput] = useState<OutputEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,29 +255,98 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
     refreshCollectionNames();
   }, [refreshCollectionNames]);
 
-  const saveHistory = (next: string[]) => {
-    setQueryHistory(next);
-    try {
-      window.localStorage.setItem(
-        CODE_EDITOR_STORAGE_KEY,
-        JSON.stringify(next),
-      );
-    } catch {
-      // ignore
+  useEffect(() => {
+    if (!hasRestoredTabs) return;
+    persistTabs(tabs, activeTabId);
+  }, [tabs, activeTabId, hasRestoredTabs]);
+
+  useEffect(() => {
+    if (tabs.length === 0) return;
+    if (!tabs.some((t) => t.id === activeTabId)) {
+      setActiveTabId(tabs[0].id);
     }
-  };
+  }, [tabs, activeTabId]);
 
   const onHistoryUp = useCallback(() => {
-    if (queryHistory.length === 0) return;
-    setHistoryIndex((i) => (i <= 0 ? queryHistory.length - 1 : i - 1));
-  }, [queryHistory]);
+    setTabs((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTabIdRef.current) return t;
+        if (t.queryHistory.length === 0) return t;
+        const nextIdx =
+          t.historyIndex <= 0 ? t.queryHistory.length - 1 : t.historyIndex - 1;
+        return { ...t, historyIndex: nextIdx };
+      }),
+    );
+  }, []);
 
   const onHistoryDown = useCallback(() => {
-    if (queryHistory.length === 0) return;
-    setHistoryIndex((i) =>
-      i < 0 || i >= queryHistory.length - 1 ? -1 : i + 1,
+    setTabs((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTabIdRef.current) return t;
+        if (t.queryHistory.length === 0) return t;
+        const nextIdx =
+          t.historyIndex < 0 || t.historyIndex >= t.queryHistory.length - 1
+            ? -1
+            : t.historyIndex + 1;
+        return { ...t, historyIndex: nextIdx };
+      }),
     );
-  }, [queryHistory]);
+  }, []);
+
+  const addTab = useCallback(() => {
+    setTabs((prev) => {
+      const next = createEmptyTab(prev.length + 1);
+      setActiveTabId(next.id);
+      return [...prev, next];
+    });
+  }, []);
+
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const renameDraftRef = useRef(renameDraft);
+  renameDraftRef.current = renameDraft;
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const skipRenameBlurRef = useRef(false);
+
+  useEffect(() => {
+    if (!renamingTabId) return;
+    const el = renameInputRef.current;
+    if (!el) return;
+    el.focus();
+    el.select();
+  }, [renamingTabId]);
+
+  const beginRename = useCallback((tabId: string, currentTitle: string) => {
+    setRenameDraft(currentTitle);
+    renameDraftRef.current = currentTitle;
+    setRenamingTabId(tabId);
+  }, []);
+
+  const finishRename = useCallback((tabId: string, raw: string) => {
+    setTabs((prev) => {
+      const i = prev.findIndex((t) => t.id === tabId);
+      if (i < 0) return prev;
+      const title =
+        raw.trim().length > 0 ? raw.trim() : defaultTabTitle(i + 1);
+      return prev.map((t) => (t.id === tabId ? { ...t, title } : t));
+    });
+    setRenamingTabId(null);
+  }, []);
+
+  const removeTab = useCallback((id: string) => {
+    setRenamingTabId((r) => (r === id ? null : r));
+    setTabs((prev) => {
+      if (prev.length <= 1) return prev;
+      const i = prev.findIndex((t) => t.id === id);
+      if (i < 0) return prev;
+      const next = prev.filter((t) => t.id !== id);
+      if (activeTabIdRef.current === id) {
+        const pick = prev[i + 1]?.id ?? prev[i - 1]?.id ?? next[0].id;
+        setActiveTabId(pick);
+      }
+      return next;
+    });
+  }, []);
 
   const copyOutput = (item: OutputEntry) => {
     const text = item.error
@@ -169,8 +361,12 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   useEffect(() => {
     if (!injectQueryRef) return;
     injectQueryRef.current = (query: string) => {
-      setCurrentDraft(query);
-      setHistoryIndex(-1);
+      const id = activeTabIdRef.current;
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === id ? { ...t, draft: query, historyIndex: -1 } : t,
+        ),
+      );
     };
     return () => {
       injectQueryRef.current = null;
@@ -186,9 +382,14 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   }, [output]);
 
   const handleClear = () => {
-    setOutput([]);
-    setCurrentDraft("");
-    setHistoryIndex(-1);
+    const id = activeTabId;
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? { ...t, output: [], draft: "", historyIndex: -1 }
+          : t,
+      ),
+    );
   };
 
   const handleDownload = () => {
@@ -210,32 +411,55 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const tabId = activeTabId;
     const reader = new FileReader();
     reader.onload = () => {
-      setCurrentDraft(String(reader.result ?? ""));
-      setHistoryIndex(-1);
+      const text = String(reader.result ?? "");
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === tabId ? { ...t, draft: text, historyIndex: -1 } : t,
+        ),
+      );
     };
     reader.readAsText(file);
     e.target.value = "";
   };
 
   const handleRun = async () => {
-    const query = displayValue.trim();
+    const tabId = activeTabId;
+    const tab = tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+
+    const fromHistory =
+      tab.historyIndex >= 0 && tab.queryHistory.length > 0
+        ? tab.queryHistory[tab.historyIndex]
+        : tab.draft;
+    const query = fromHistory.trim();
     if (!query) return;
 
     const nextHistory =
-      queryHistory[queryHistory.length - 1] === query
-        ? queryHistory
-        : [...queryHistory, query].slice(-MAX_QUERY_HISTORY);
-    saveHistory(nextHistory);
-    setHistoryIndex(-1);
+      tab.queryHistory[tab.queryHistory.length - 1] === query
+        ? tab.queryHistory
+        : [...tab.queryHistory, query].slice(-MAX_QUERY_HISTORY);
 
     const entry: OutputEntry = {
       id: crypto.randomUUID(),
       query,
       timestamp: Date.now(),
     };
-    setOutput((prev) => [...prev, entry]);
+
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === tabId
+          ? {
+              ...t,
+              queryHistory: nextHistory,
+              historyIndex: -1,
+              output: [...t.output, entry],
+            }
+          : t,
+      ),
+    );
     setIsRunning(true);
 
     try {
@@ -255,14 +479,21 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         json = text ? JSON.parse(text) : {};
       } catch {
         const preview = text.slice(0, 150).replace(/\n/g, " ");
-        setOutput((prev) =>
-          prev.map((item) =>
-            item.id === entry.id
-              ? {
-                  ...item,
-                  error: `Server returned non-JSON (${res.status}). Check connection and auth. ${preview}${text.length > 150 ? "…" : ""}`,
-                }
-              : item,
+        setTabs((prev) =>
+          prev.map((t) =>
+            t.id !== tabId
+              ? t
+              : {
+                  ...t,
+                  output: t.output.map((item) =>
+                    item.id === entry.id
+                      ? {
+                          ...item,
+                          error: `Server returned non-JSON (${res.status}). Check connection and auth. ${preview}${text.length > 150 ? "…" : ""}`,
+                        }
+                      : item,
+                  ),
+                },
           ),
         );
         return;
@@ -275,16 +506,23 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
           : (json as { error?: { message?: string } }).error?.message;
       const result = errMsg ? undefined : "data" in json ? json.data : undefined;
 
-      setOutput((prev) =>
-        prev.map((item) =>
-          item.id === entry.id
-            ? {
-                ...item,
-                result,
-                error: errMsg,
-                code: json.code,
-              }
-            : item,
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id !== tabId
+            ? t
+            : {
+                ...t,
+                output: t.output.map((item) =>
+                  item.id === entry.id
+                    ? {
+                        ...item,
+                        result,
+                        error: errMsg,
+                        code: json.code,
+                      }
+                    : item,
+                ),
+              },
         ),
       );
 
@@ -293,9 +531,16 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Network error";
-      setOutput((prev) =>
-        prev.map((item) =>
-          item.id === entry.id ? { ...item, error: message } : item,
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id !== tabId
+            ? t
+            : {
+                ...t,
+                output: t.output.map((item) =>
+                  item.id === entry.id ? { ...item, error: message } : item,
+                ),
+              },
         ),
       );
     } finally {
@@ -305,7 +550,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-gray-1 gap-0.5 p-0.5">
-      <header className="flex w-full min-w-0 max-w-full shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-6 px-2 pb-1">
+      <header className="flex w-full min-w-0 max-w-full shrink-0 flex-wrap items-center justify-between gap-2 px-2 pb-1">
         <h1 className="shrink-0 text-sm font-semibold text-gray-12">Shell</h1>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
           <Button size="sm" variant="pill" onClick={handleClear}>
@@ -336,6 +581,101 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
           />
         </div>
       </header>
+
+      <div className="flex min-w-0 shrink-0 items-stretch gap-0 border-b border-gray-6">
+        <Tabs
+          value={activeTabId}
+          onValueChange={setActiveTabId}
+          className="flex min-w-0 flex-1 flex-col gap-0"
+        >
+          <TabsList className="h-auto min-h-3 w-full min-w-0 max-w-full justify-start overflow-x-auto rounded-none border-0 bg-transparent px-1">
+            {tabs.map((t) => (
+              <TabsTrigger
+                key={t.id}
+                value={t.id}
+                className="text-gray-10 data-[state=active]:text-gray-11 hover:text-gray-11 hover:bg-gray-a2 inline-flex h-[calc(100%+1px)] w-12 min-w-12 max-w-12 shrink-0 flex-none cursor-pointer items-center gap-0.5 border-b-transparent px-1 py-1 data-[state=active]:border-b-2 data-[state=active]:border-b-gray-a6"
+              >
+                {renamingTabId === t.id ? (
+                  <input
+                    ref={renameInputRef}
+                    type="text"
+                    value={renameDraft}
+                    className="min-w-0 flex-1 bg-transparent text-xs text-inherit outline-none"
+                    aria-label="Tab name"
+                    onChange={(e) => {
+                      setRenameDraft(e.target.value);
+                      renameDraftRef.current = e.target.value;
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.currentTarget.blur();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        skipRenameBlurRef.current = true;
+                        setRenamingTabId(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (skipRenameBlurRef.current) {
+                        skipRenameBlurRef.current = false;
+                        return;
+                      }
+                      finishRename(t.id, renameDraftRef.current);
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="min-w-0 flex-1 truncate text-left text-xs"
+                    title={`${t.title} — double-click to rename`}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      beginRename(t.id, t.title);
+                    }}
+                  >
+                    {t.title}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  disabled={tabs.length <= 1}
+                  className="text-gray-10 hover:text-gray-11 disabled:pointer-events-none disabled:opacity-40 shrink-0 rounded-sm p-0.5 hover:bg-gray-a3"
+                  aria-label={`Close ${t.title}`}
+                  title={
+                    tabs.length <= 1
+                      ? "Cannot close the last tab"
+                      : "Close tab"
+                  }
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeTab(t.id);
+                  }}
+                >
+                  <TrashIcon className="icon" aria-hidden />
+                </button>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <Button
+          type="button"
+          size="sm"
+          variant="pill"
+          className="shrink-0 self-center rounded-none"
+          aria-label="New query tab"
+          title="New query tab"
+          onClick={addTab}
+        >
+          <PlusIcon className="icon" aria-hidden />
+        </Button>
+      </div>
 
       <div
         role="region"
@@ -406,8 +746,12 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
           <ShellQueryEditor
             value={displayValue}
             onChange={(v) => {
-              setCurrentDraft(v);
-              setHistoryIndex(-1);
+              const id = activeTabIdRef.current;
+              setTabs((prev) =>
+                prev.map((t) =>
+                  t.id === id ? { ...t, draft: v, historyIndex: -1 } : t,
+                ),
+              );
             }}
             collectionNames={collectionNames}
             collectionIndexes={collectionIndexes}
@@ -417,7 +761,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
           />
         </div>
         <p className="text-xs text-gray-11 px-0.5 my-0">
-          Ctrl+Space suggestions · ↑↓ when history exists
+          Ctrl+Space suggestions · ↑↓ in list, or history when list closed
         </p>
         <div>
           <Button

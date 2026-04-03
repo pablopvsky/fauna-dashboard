@@ -15,6 +15,18 @@ import "@/styles/shell-editor-monaco.css";
 const FQL_LANGUAGE_ID = "fql";
 const FQL_THEME_ID = "fauna-shell-fql";
 
+/** When true, let Monaco handle ↑/↓ (suggest list, parameter hints) instead of shell history. */
+function isMonacoInlineWidgetNavigationActive(
+  codeEditor: editor.IStandaloneCodeEditor,
+): boolean {
+  const root = codeEditor.getDomNode();
+  if (!root) return false;
+  return (
+    root.querySelector(".suggest-widget.visible") !== null ||
+    root.querySelector(".parameter-hints-widget.visible") !== null
+  );
+}
+
 function readCssVar(name: string, fallback: string): string {
   if (typeof document === "undefined") return fallback;
   const v = getComputedStyle(document.documentElement)
@@ -184,13 +196,17 @@ export function ShellQueryEditor({
     keyDownDisposableRef.current = ed.onKeyDown((e) => {
       if (!historyActiveRef.current) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.keyCode !== KeyCode.UpArrow && e.keyCode !== KeyCode.DownArrow) {
+        return;
+      }
+      if (isMonacoInlineWidgetNavigationActive(ed)) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
       if (e.keyCode === KeyCode.UpArrow) {
-        e.preventDefault();
-        e.stopPropagation();
         onHistoryUpRef.current();
-      } else if (e.keyCode === KeyCode.DownArrow) {
-        e.preventDefault();
-        e.stopPropagation();
+      } else {
         onHistoryDownRef.current();
       }
     });
