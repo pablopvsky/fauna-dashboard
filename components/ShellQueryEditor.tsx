@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef } from "react";
 import { FQL_STATIC_COMPLETION_LABELS } from "@/lib/fql-completion-static";
 import { fqlMonarchLanguage } from "@/lib/fql-monarch";
+import "@/styles/shell-editor-monaco.css";
 
 const FQL_LANGUAGE_ID = "fql";
 const FQL_THEME_ID = "fauna-shell-fql";
@@ -175,7 +176,7 @@ export function ShellQueryEditor({
 
   return (
     <div
-      className="shell-query-editor--monaco min-w-0 max-w-full overflow-hidden rounded-[var(--aura-input-radius)] border border-gray-6 bg-gray-3"
+      className="shell-query-editor--monaco relative z-20 min-w-0 max-w-full overflow-visible rounded-[var(--aura-input-radius)] border border-gray-6 bg-gray-3"
       style={{ minHeight: minHeightPx }}
     >
       <Editor
@@ -188,6 +189,9 @@ export function ShellQueryEditor({
         beforeMount={handleBeforeMount}
         onMount={handleMount}
         options={{
+          // Render suggest/hover widgets with position:fixed so they are not clipped by
+          // shell layout (overflow-hidden flex ancestors).
+          fixedOverflowWidgets: true,
           minimap: { enabled: false },
           fontSize: 13,
           fontFamily:

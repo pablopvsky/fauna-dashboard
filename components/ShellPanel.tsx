@@ -368,8 +368,8 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         </div>
       </ScrollArea>
 
-      <div className="flex min-w-0 max-w-full shrink-0 flex-col gap-1 pt-0.5">
-        <div className="min-w-0 max-w-full overflow-x-auto">
+      <div className="relative z-20 flex min-w-0 max-w-full shrink-0 flex-col gap-1 overflow-visible pt-0.5">
+        <div className="min-w-0 max-w-full">
           <ShellQueryEditor
             value={displayValue}
             onChange={(v) => {
@@ -382,7 +382,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
             onHistoryDown={onHistoryDown}
           />
         </div>
-        <p className="text-xs text-gray-11 px-0.5">
+        <p className="text-xs text-gray-11 px-0.5 my-0">
           Ctrl+Space suggestions · ↑↓ when history exists
         </p>
         <div>

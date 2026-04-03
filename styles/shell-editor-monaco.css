@@ -1,0 +1,9 @@
+/* Ensure Monaco overlay UI stacks above shell chrome (sidebars, sticky headers). */
+.shell-query-editor--monaco .suggest-widget,
+.shell-query-editor--monaco .parameter-hints-widget {
+  z-index: 100;
+}
+
+.shell-query-editor--monaco .monaco-editor .overflow-guard {
+  border-radius: inherit;
+}
