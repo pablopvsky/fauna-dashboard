@@ -72,10 +72,17 @@ function registerFqlLanguage(monaco: Monaco) {
   });
 }
 
+export type ShellCollectionIndexCompletion = {
+  name: string;
+  collectionName: string;
+};
+
 export type ShellQueryEditorProps = {
   value: string;
   onChange: (value: string) => void;
   collectionNames: readonly string[];
+  /** Per-collection index names from live schema (detail shows owning collection). */
+  collectionIndexes: readonly ShellCollectionIndexCompletion[];
   /** When false, arrow keys use default editor navigation (same as empty history in textarea). */
   historyNavigationActive: boolean;
   onHistoryUp: () => void;
@@ -87,12 +94,14 @@ export function ShellQueryEditor({
   value,
   onChange,
   collectionNames,
+  collectionIndexes,
   historyNavigationActive,
   onHistoryUp,
   onHistoryDown,
   minHeightPx = 120,
 }: ShellQueryEditorProps) {
   const collectionNamesRef = useRef(collectionNames);
+  const collectionIndexesRef = useRef(collectionIndexes);
   const historyActiveRef = useRef(historyNavigationActive);
   const onHistoryUpRef = useRef(onHistoryUp);
   const onHistoryDownRef = useRef(onHistoryDown);
@@ -102,6 +111,7 @@ export function ShellQueryEditor({
 
   useEffect(() => {
     collectionNamesRef.current = collectionNames;
+    collectionIndexesRef.current = collectionIndexes;
     historyActiveRef.current = historyNavigationActive;
     onHistoryUpRef.current = onHistoryUp;
     onHistoryDownRef.current = onHistoryDown;
@@ -153,7 +163,19 @@ export function ShellQueryEditor({
             sortText: `1${name}`,
           }));
 
-          return { suggestions: [...staticItems, ...collectionItems] };
+          const indexRows = collectionIndexesRef.current;
+          const indexItems = indexRows.map((row) => ({
+            label: row.name,
+            kind: monaco.languages.CompletionItemKind.Field,
+            detail: `Index · ${row.collectionName}`,
+            insertText: row.name,
+            range,
+            sortText: `2${row.collectionName}/${row.name}`,
+          }));
+
+          return {
+            suggestions: [...staticItems, ...collectionItems, ...indexItems],
+          };
         },
       },
     );

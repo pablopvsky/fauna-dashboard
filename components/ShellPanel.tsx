@@ -59,16 +59,37 @@ type ShellPanelProps = {
   injectQueryRef?: React.MutableRefObject<((query: string) => void) | null>;
 };
 
-async function fetchCollectionNames(): Promise<string[]> {
+type CollectionsApiJson = {
+  success?: boolean;
+  names?: string[];
+  collections?: { name?: string; indexes?: string[] }[];
+};
+
+async function fetchShellSchemaCompletions(): Promise<{
+  names: string[];
+  collectionIndexes: { name: string; collectionName: string }[];
+}> {
   const res = await dashboardFetch("/api/collections");
-  const json = (await res.json()) as {
-    success?: boolean;
-    names?: string[];
-  };
+  const json = (await res.json()) as CollectionsApiJson;
   if (!res.ok || json.success !== true || !Array.isArray(json.names)) {
-    return [];
+    return { names: [], collectionIndexes: [] };
   }
-  return json.names;
+  const collectionIndexes: { name: string; collectionName: string }[] = [];
+  for (const c of json.collections ?? []) {
+    const collName = typeof c?.name === "string" ? c.name : "";
+    if (!collName || !Array.isArray(c.indexes)) continue;
+    for (const idx of c.indexes) {
+      if (typeof idx === "string" && idx.length > 0) {
+        collectionIndexes.push({ name: idx, collectionName: collName });
+      }
+    }
+  }
+  collectionIndexes.sort((a, b) => {
+    const c = a.collectionName.localeCompare(b.collectionName);
+    if (c !== 0) return c;
+    return a.name.localeCompare(b.name);
+  });
+  return { names: json.names, collectionIndexes };
 }
 
 export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
@@ -90,6 +111,9 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
       : currentDraft;
 
   const [collectionNames, setCollectionNames] = useState<string[]>([]);
+  const [collectionIndexes, setCollectionIndexes] = useState<
+    { name: string; collectionName: string }[]
+  >([]);
   const [output, setOutput] = useState<OutputEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -97,7 +121,10 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
   const outputEndRef = useRef<HTMLDivElement>(null);
 
   const refreshCollectionNames = useCallback(() => {
-    void fetchCollectionNames().then(setCollectionNames);
+    void fetchShellSchemaCompletions().then(({ names, collectionIndexes: idx }) => {
+      setCollectionNames(names);
+      setCollectionIndexes(idx);
+    });
   }, []);
 
   useEffect(() => {
@@ -377,6 +404,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
               setHistoryIndex(-1);
             }}
             collectionNames={collectionNames}
+            collectionIndexes={collectionIndexes}
             historyNavigationActive={queryHistory.length > 0}
             onHistoryUp={onHistoryUp}
             onHistoryDown={onHistoryDown}
