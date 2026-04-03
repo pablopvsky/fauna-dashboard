@@ -392,7 +392,7 @@ export function AppSidebar({
             </>
           )}
         </header>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden p-0.5">
+        <div className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-y-auto overflow-x-hidden p-0.5">
           {children}
         </div>
       </SidebarInset>

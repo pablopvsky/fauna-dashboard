@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Eraser, Download, FolderOpen, Play, Copy, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { ScrollArea } from "@/components/ui/ScrollArea";
 import { dashboardFetch } from "@/utils/dashboard-api";
 
 const ShellQueryEditor = dynamic(
@@ -36,21 +35,23 @@ type OutputEntry = {
 function OutputWithLineNumbers({ text }: { text: string | undefined }) {
   const lines = (text ?? "").split("\n");
   return (
-    <div className="font-mono text-sm">
-      {lines.map((line, i) => (
-        <div
-          key={i}
-          className="flex w-max min-w-full hover:bg-gray-11"
-        >
-          <span
-            className="select-none shrink-0 w-4 pr-2 text-right text-gray-8 border-r border-gray-6"
-            aria-hidden
+    <div className="min-w-0 overflow-x-auto font-mono text-sm">
+      <div className="inline-block min-w-full align-top">
+        {lines.map((line, i) => (
+          <div
+            key={i}
+            className="flex min-w-0 hover:bg-gray-11"
           >
-            {i + 1}
-          </span>
-          <span className="whitespace-pre pl-2 pr-2">{line || "\u00A0"}</span>
-        </div>
-      ))}
+            <span
+              className="select-none shrink-0 w-4 pr-2 text-right text-gray-8 border-r border-gray-6"
+              aria-hidden
+            >
+              {i + 1}
+            </span>
+            <span className="whitespace-pre pl-2 pr-2">{line || "\u00A0"}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -304,7 +305,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-gray-1 gap-0.5 p-0.5">
-      <header className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-6 px-2 pb-1">
+      <header className="flex w-full min-w-0 max-w-full shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gray-6 px-2 pb-1">
         <h1 className="shrink-0 text-sm font-semibold text-gray-12">Shell</h1>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-1">
           <Button size="sm" variant="pill" onClick={handleClear}>
@@ -336,18 +337,19 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
         </div>
       </header>
 
-      <ScrollArea
-        scrollbarMode="both"
-        className="min-h-0 min-w-0 max-w-full flex-1 bg-gray-12 text-gray-contrast"
+      <div
+        role="region"
+        aria-label="Query results"
+        className="min-h-0 min-w-0 max-w-full flex-1 overflow-auto bg-gray-12 text-gray-contrast"
       >
-        <div className="min-h-full min-h-[12rem] w-max min-w-full space-y-2 p-2">
+        <div className="min-h-[12rem] min-h-full min-w-0 w-full max-w-full space-y-2 p-2">
           {output.length === 0 && (
             <p className="text-sm text-gray-2">
               Run a query to see results here.
             </p>
           )}
           {output.map((item) => (
-            <div key={item.id} className="relative">
+            <div key={item.id} className="relative min-w-0 max-w-full">
               <div className="absolute right-1 top-1 z-10">
                 <Button
                   size="sm"
@@ -376,7 +378,11 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
                     : item.query}
                 </div>
               )}
-              <div className={item.query ? "min-w-0" : "min-w-0 pt-6"}>
+              <div
+                className={
+                  item.query ? "min-w-0 max-w-full" : "min-w-0 max-w-full pt-6"
+                }
+              >
                 {item.error ? (
                   <OutputWithLineNumbers
                     text={[item.code && `${item.code}: `, item.error]
@@ -393,7 +399,7 @@ export function ShellPanel({ injectQueryRef }: ShellPanelProps) {
           ))}
           <div ref={outputEndRef} aria-hidden />
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="relative z-20 flex min-w-0 max-w-full shrink-0 flex-col gap-1 overflow-visible pt-0.5">
         <div className="min-w-0 max-w-full">
